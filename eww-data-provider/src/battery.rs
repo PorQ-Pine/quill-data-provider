@@ -1,7 +1,7 @@
-use inotify::{EventMask, Inotify, WatchMask};
-use std::path::PathBuf;
-use tokio::{fs::read_to_string, io::AsyncWriteExt};
 use crate::{consts::BATTERY_DEVICE, listener::SocketHandler};
+use inotify::{EventMask, Inotify, WatchMask};
+use std::{path::PathBuf, time::Duration};
+use tokio::{fs::read_to_string, io::AsyncWriteExt, time::sleep};
 
 pub struct BatteryStateListener;
 
@@ -22,7 +22,7 @@ impl SocketHandler for BatteryStateListener {
         let mut buffer = [0; 1024];
         loop {
             let events = inotify_instance
-                .read_events_blocking(&mut buffer)
+                .read_events(&mut buffer)
                 .expect("Failed to read inotify events");
 
             for event in events {
@@ -38,6 +38,8 @@ impl SocketHandler for BatteryStateListener {
                     }
                 }
             }
+
+            sleep(Duration::from_secs(1)).await;
         }
     }
 }
@@ -61,7 +63,7 @@ impl SocketHandler for BatteryPercentListener {
         let mut buffer = [0; 1024];
         loop {
             let events = inotify_instance
-                .read_events_blocking(&mut buffer)
+                .read_events(&mut buffer)
                 .expect("Failed to read inotify events");
 
             for event in events {
@@ -77,6 +79,7 @@ impl SocketHandler for BatteryPercentListener {
                     }
                 }
             }
+            sleep(Duration::from_secs(1)).await;
         }
     }
 }

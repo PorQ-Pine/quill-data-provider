@@ -1,7 +1,8 @@
 use crate::{consts::BATTERY_DEVICE, listener::SocketHandler};
+use futures_util::StreamExt;
 use inotify::{EventMask, Inotify, WatchMask};
-use std::{path::PathBuf, time::Duration};
-use tokio::{fs::read_to_string, io::AsyncWriteExt, time::sleep};
+use std::path::PathBuf;
+use tokio::{fs::read_to_string, io::AsyncWriteExt};
 
 pub struct BatteryStateListener;
 
@@ -13,33 +14,40 @@ impl SocketHandler for BatteryStateListener {
         path.push(BATTERY_DEVICE);
         path.push("status");
 
-        let mut inotify_instance = Inotify::init().expect("Failed to initialize inotify");
+        let inotify_instance = Inotify::init().expect("Failed to initialize inotify");
         inotify_instance
             .watches()
             .add(&path, WatchMask::MODIFY)
             .expect("Failed to add inotify watch");
 
         let mut buffer = [0; 1024];
-        loop {
-            let events = inotify_instance
-                .read_events(&mut buffer)
-                .expect("Failed to read inotify events");
+        let mut stream = inotify_instance
+            .into_event_stream(&mut buffer)
+            .expect("Failed to create event stream");
 
-            for event in events {
-                if event.mask.contains(EventMask::MODIFY) {
-                    let content = read_to_string(&path)
-                        .await
-                        .expect("Failed to read battery status");
-                    let content = content.trim();
-                    if !content.is_empty() {
-                        unix.write_all(content.as_bytes())
+        loop {
+            let event_result = stream.next().await;
+            match event_result {
+                Some(Ok(event)) => {
+                    if event.mask.contains(EventMask::MODIFY) {
+                        let content = read_to_string(&path)
                             .await
-                            .expect("Failed to write to socket");
+                            .expect("Failed to read battery status");
+                        let content = content.trim();
+                        if !content.is_empty() {
+                            unix.write_all(content.as_bytes())
+                                .await
+                                .expect("Failed to write to socket");
+                        }
                     }
                 }
+                Some(Err(e)) => eprintln!("Error reading inotify event: {}", e),
+                None => {
+                    // Stream ended, which shouldn't happen for inotify
+                    eprintln!("Inotify event stream ended unexpectedly.");
+                    break;
+                }
             }
-
-            sleep(Duration::from_secs(1)).await;
         }
     }
 }
@@ -54,32 +62,40 @@ impl SocketHandler for BatteryPercentListener {
         path.push(BATTERY_DEVICE);
         path.push("capacity");
 
-        let mut inotify_instance = Inotify::init().expect("Failed to initialize inotify");
+        let inotify_instance = Inotify::init().expect("Failed to initialize inotify");
         inotify_instance
             .watches()
             .add(&path, WatchMask::MODIFY)
             .expect("Failed to add inotify watch");
 
         let mut buffer = [0; 1024];
-        loop {
-            let events = inotify_instance
-                .read_events(&mut buffer)
-                .expect("Failed to read inotify events");
+        let mut stream = inotify_instance
+            .into_event_stream(&mut buffer)
+            .expect("Failed to create event stream");
 
-            for event in events {
-                if event.mask.contains(EventMask::MODIFY) {
-                    let content = read_to_string(&path)
-                        .await
-                        .expect("Failed to read battery capacity");
-                    let content = content.trim();
-                    if !content.is_empty() {
-                        unix.write_all(content.as_bytes())
+        loop {
+            let event_result = stream.next().await;
+            match event_result {
+                Some(Ok(event)) => {
+                    if event.mask.contains(EventMask::MODIFY) {
+                        let content = read_to_string(&path)
                             .await
-                            .expect("Failed to write to socket");
+                            .expect("Failed to read battery capacity");
+                        let content = content.trim();
+                        if !content.is_empty() {
+                            unix.write_all(content.as_bytes())
+                                .await
+                                .expect("Failed to write to socket");
+                        }
                     }
                 }
+                Some(Err(e)) => eprintln!("Error reading inotify event: {}", e),
+                None => {
+                    // Stream ended, which shouldn't happen for inotify
+                    eprintln!("Inotify event stream ended unexpectedly.");
+                    break;
+                }
             }
-            sleep(Duration::from_secs(1)).await;
         }
     }
 }

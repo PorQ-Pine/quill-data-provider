@@ -17,10 +17,8 @@ fn main() -> io::Result<()> {
     let socket_path = format!("{}/{}.socket", dir_path, socket_name);
     let path = Path::new(&socket_path);
 
-    // Create the directory if it doesn't exist
     fs::create_dir_all(dir_path)?;
 
-    // Remove the socket file if it already exists
     if path.exists() {
         eprintln!("Removing existing socket: {}", socket_path);
         fs::remove_file(path)?;
@@ -32,10 +30,9 @@ fn main() -> io::Result<()> {
     for stream in listener.incoming() {
         match stream {
             Ok(mut stream) => {
-                let mut buffer = Vec::new();
-                stream.read_to_end(&mut buffer)?;
-                let received_data = String::from_utf8_lossy(&buffer);
-                println!("{}", received_data);
+                let mut string = String::new();
+                stream.read_to_string(&mut string)?;
+                println!("{}", string);
             }
             Err(e) => {
                 eprintln!("Error accepting connection: {}", e);

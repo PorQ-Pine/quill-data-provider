@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let battery_percent = BatteryPercentListener;
     tokio::spawn(async move {
-        battery_percent.start(battery_percent.open_socket().await).await;
+        // battery_percent.start(battery_percent.open_socket().await).await;
     });
 
     tokio::signal::ctrl_c().await.expect("failed to listen for event");

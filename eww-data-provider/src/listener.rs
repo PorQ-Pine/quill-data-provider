@@ -1,3 +1,4 @@
+#[allow(async_fn_in_trait)]
 pub trait SocketHandler {
     const SOCKET_NAME: &'static str;
 
@@ -14,7 +15,7 @@ pub trait SocketHandler {
                 }
                 Err(e) => {
                     eprintln!("Waiting for socket at {}: {}", socket_path, e);
-                    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
                 }
             }
         }

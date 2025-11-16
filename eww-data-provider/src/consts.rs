@@ -1,1 +1,1 @@
-const BATTERY_DEVICE: &'static str = "BAT0";
+pub const BATTERY_DEVICE: &'static str = "BAT0";

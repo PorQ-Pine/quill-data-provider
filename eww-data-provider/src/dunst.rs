@@ -38,7 +38,6 @@ struct DunstHistory {
 }
 
 pub async fn get_dunst_info() -> String {
-    // Get pause level
     let paused_output = Command::new("dunstctl")
         .arg("get-pause-level")
         .output().await
@@ -50,7 +49,6 @@ pub async fn get_dunst_info() -> String {
         .unwrap();
     let paused = paused_level == 1;
 
-    // Get notifications history
     let history_output = Command::new("dunstctl").arg("history").output().await.unwrap();
 
     let history_json_str = String::from_utf8_lossy(&history_output.stdout);

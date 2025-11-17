@@ -5,7 +5,8 @@ pub mod bluetooth;
 pub mod backlight;
 pub mod dunst;
 pub mod player;
-pub mod network; // Add this line
+pub mod network;
+pub mod volume;
 
 use listener::SocketHandler;
 use battery::{BatteryStateListener, BatteryPercentListener};
@@ -13,7 +14,8 @@ use bluetooth::BluetoothListener;
 use backlight::CoolBacklightListener;
 use backlight::WarmBacklightListener;
 use player::PlayerListener;
-use network::NetworkListener; // Add this line
+use network::NetworkListener;
+use volume::VolumeListener;
 use log::*;
 
 #[tokio::main]
@@ -61,6 +63,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         let mut socket = network_listener.open_socket().await;
         network_listener.start(&mut socket).await;
+    });
+
+    let volume_listener = VolumeListener;
+    tokio::spawn(async move {
+        let mut socket = volume_listener.open_socket().await;
+        volume_listener.start(&mut socket).await;
     });
 
     tokio::signal::ctrl_c().await.expect("failed to listen for event");

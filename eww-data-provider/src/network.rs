@@ -1,4 +1,3 @@
-// src/network.rs
 use async_trait::async_trait;
 use log::*;
 use tokio::{
@@ -19,7 +18,6 @@ async fn get_network_info() -> String {
     let mut essid = String::new();
     let mut signal = String::new();
 
-    // Get signal
     let nmcli_wifi_output = Command::new("nmcli")
         .arg("-f")
         .arg("in-use,signal")
@@ -37,7 +35,6 @@ async fn get_network_info() -> String {
         }
     }
 
-    // Get ESSID
     let nmcli_conn_output = Command::new("nmcli")
         .arg("-t")
         .arg("-f")
@@ -83,13 +80,12 @@ impl SocketHandler for NetworkListener {
         let stdout = cmd.stdout.take().expect("Failed to take stdout");
         let mut reader = BufReader::new(stdout).lines();
 
-        while let Some(line) = reader
+        while let Some(_line) = reader
             .next_line()
             .await
             .expect("Failed to read line from ip monitor link")
         {
             // debug!("ip monitor link line: {}", line);
-            // Re-fetch network info on any link change
             let current_network_info = get_network_info().await;
             if previous_network_info != current_network_info {
                 self.send_unix(unix, current_network_info.clone()).await;

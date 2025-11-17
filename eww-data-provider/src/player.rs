@@ -52,19 +52,16 @@ async fn process_player_metadata(raw_json: &str) -> String {
     let status = raw_metadata.status.unwrap_or_default();
     let length_us: Option<u64> = raw_metadata.length.and_then(|s| s.parse::<u64>().ok());
 
-    // Process length
     let length = if let Some(l) = length_us {
         ((l + 500_000) / 1_000_000).to_string()
     } else {
         "".to_string()
     };
 
-    // Remove "file://" prefix from artUrl
     if art_url.starts_with("file://") {
         art_url = art_url.strip_prefix("file://").unwrap_or(&art_url).to_string();
     }
 
-    // Get formatted length string
     let length_str = if let Some(l_us) = length_us {
         let total_seconds = l_us / 1_000_000;
         let hours = total_seconds / 3600;
@@ -107,7 +104,7 @@ impl SocketHandler for PlayerListener {
 
         let mut cmd = Command::new("playerctl")
             .arg("metadata")
-            .arg("-F") // Follow mode
+            .arg("-F")
             .arg("-f")
             .arg(r#"{"name":"{{playerName}}","title":"{{title}}","artist":"{{artist}}","artUrl":"{{mpris:artUrl}}","status":"{{status}}","length":"{{mpris:length}}"}"#)
             .stdout(std::process::Stdio::piped())
@@ -117,7 +114,6 @@ impl SocketHandler for PlayerListener {
         let stdout = cmd.stdout.take().expect("Failed to take stdout");
         let mut reader = BufReader::new(stdout).lines();
 
-        // Read the first line to get the initial state
         let initial_line = reader
             .next_line()
             .await

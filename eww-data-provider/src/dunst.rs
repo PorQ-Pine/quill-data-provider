@@ -90,7 +90,7 @@ pub async fn get_dunst_info() -> String {
         notifications,
     };
 
-    match serde_json::to_string_pretty(&final_output) {
+    match serde_json::to_string(&final_output) {
         Ok(json) => return json,
         Err(_) => return String::from("{\"paused\": false, \"notifications\": []}"),
     };
@@ -102,7 +102,7 @@ pub struct DunstListener {
 
 #[async_trait]
 impl SocketHandler for DunstListener {
-    const SOCKET_NAME: &'static str = "battery_state";
+    const SOCKET_NAME: &'static str = "notifications";
 
     async fn start(&mut self, unix: &mut tokio::net::UnixStream) {
         info!("Starting DunstListener");

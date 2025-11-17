@@ -1,8 +1,8 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use enums::Requests;
-use log::{error, info};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use tokio::{process::Command, time::sleep};
@@ -44,27 +44,32 @@ struct DunstHistory {
     data: Vec<Vec<DunstHistoryItem>>,
 }
 
+fn empty_player() -> String {
+    String::from("{\"paused\": false, \"empty\":true, \"notifications\": []}")
+}
+
 pub async fn get_dunst_info() -> String {
-    let paused_output = Command::new("dunstctl")
+    let Ok(paused_output) = Command::new("dunstctl")
         .arg("get-pause-level")
         .output()
         .await
-        .unwrap();
+    else {
+        return empty_player();
+    };
 
-    let paused_level = String::from_utf8_lossy(&paused_output.stdout)
-        .trim()
-        .parse::<u8>()
-        .unwrap();
+    let paused_level = String::from_utf8(paused_output.stdout)
+        .ok()
+        .and_then(|s| s.trim().parse::<u8>().ok())
+        .unwrap_or(0);
     let paused = paused_level == 1;
 
-    let history_output = Command::new("dunstctl")
-        .arg("history")
-        .output()
-        .await
-        .unwrap();
+    let Ok(history_output) = Command::new("dunstctl").arg("history").output().await else {
+        return empty_player();
+    };
 
-    let history_json_str = String::from_utf8_lossy(&history_output.stdout);
-    let dunst_history: DunstHistory = serde_json::from_str(&history_json_str).unwrap();
+    let history_json_str = String::from_utf8(history_output.stdout).unwrap_or_default();
+    let dunst_history: DunstHistory =
+        serde_json::from_str(&history_json_str).unwrap_or(DunstHistory { data: vec![] });
 
     let mut notifications: Vec<DunstNotification> = Vec::new();
     let mut empty = true;
@@ -92,7 +97,7 @@ pub async fn get_dunst_info() -> String {
 
     match serde_json::to_string(&final_output) {
         Ok(json) => return json,
-        Err(_) => return String::from("{\"paused\": false, \"notifications\": []}"),
+        Err(_) => return empty_player(),
     };
 }
 
@@ -106,11 +111,19 @@ impl SocketHandler for DunstListener {
 
     async fn start(&mut self, unix: &mut tokio::net::UnixStream) {
         info!("Starting DunstListener");
-
+        let mut latest_call = Instant::now() - Duration::from_secs(60);
         loop {
             if let Ok(data) = self.channel.recv().await {
                 if data == Requests::Notifications {
-                    self.send_unix(unix, get_dunst_info().await).await;
+                    if Instant::now().duration_since(latest_call) > Duration::from_millis(500) {
+                        latest_call = Instant::now();
+                        self.send_unix(unix, get_dunst_info().await).await;
+                        while !self.channel.is_empty() {
+                            self.channel.recv().await.ok();
+                        }
+                    } else {
+                        warn!("Ignoring notification call, too fast!");
+                    }
                 }
             } else {
                 error!("Failed to recv");

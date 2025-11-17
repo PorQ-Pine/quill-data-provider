@@ -1,6 +1,6 @@
 use enums::Requests;
-use log::{debug, error, info};
-use std::time::Duration;
+use log::{debug, error, info, warn};
+use std::time::{Duration, Instant};
 use tokio::{process::Command, time::sleep};
 
 pub struct SettingsMenuListener {
@@ -11,24 +11,37 @@ pub struct SettingsMenuListener {
 impl SettingsMenuListener {
     pub async fn start(&mut self) {
         info!("Starting SettingsMenuListener");
+        let mut latest_call = Instant::now() - Duration::from_secs(60);
         loop {
             if let Ok(data) = self.channel_rx.recv().await {
                 if data == Requests::SettingsMenu {
-                    debug!("It is a settings menu call");
-                    let mut counter = 1;
-                    let is_visible = Self::is_visible().await;
-                    if !is_visible {
-                        self.channel_tx.send(Requests::Notifications).ok();
-                    }
-                    let mut new_is_visible = is_visible;
-                    while new_is_visible == is_visible {
-                        if counter > 1 {
-                            error!("Failed to toggle window");
+                    if Instant::now().duration_since(latest_call) > Duration::from_millis(150) {
+                        debug!("It is a settings menu call");
+                        let mut counter = 1;
+                        let is_visible = Self::is_visible().await;
+                        if !is_visible {
+                            self.channel_tx.send(Requests::Notifications).ok();
                         }
-                        Self::window_manage(!is_visible).await;
-                        sleep(Duration::from_millis(50 * counter)).await;
-                        new_is_visible = Self::is_visible().await;
-                        counter += 1;
+                        let mut new_is_visible = is_visible;
+                        while new_is_visible == is_visible {
+                            if counter > 1 {
+                                warn!("Failed to toggle window");
+                                if counter > 50 {
+                                    error!("Critical toggle window");
+                                    break;
+                                }
+                            }
+                            Self::window_manage(!is_visible).await;
+                            sleep(Duration::from_millis(50 * counter)).await;
+                            new_is_visible = Self::is_visible().await;
+                            counter += 1;
+                            latest_call = Instant::now();
+                        }
+                        while !self.channel_rx.is_empty() {
+                            self.channel_rx.recv().await.ok();
+                        }
+                    } else {
+                        warn!("Ignoring call to settings menu, too quick!");
                     }
                 }
             } else {

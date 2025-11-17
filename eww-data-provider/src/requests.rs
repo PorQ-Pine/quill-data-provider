@@ -1,11 +1,11 @@
+use anyhow::Result;
 use enums::Requests;
+use log::*;
 use tokio::{
-    io::AsyncReadExt,
+    io::{AsyncBufReadExt, AsyncReadExt, BufReader},
     net::{UnixListener, UnixStream},
     sync::broadcast,
 };
-use anyhow::Result;
-use log::*;
 
 const SOCKET_PATH: &str = "/tmp/eww_data/requests.socket";
 
@@ -32,11 +32,13 @@ pub async fn start_request_listener(tx: broadcast::Sender<Requests>) -> Result<(
     }
 }
 
-
-async fn handle_client(mut stream: UnixStream, tx: broadcast::Sender<Requests>) -> Result<()> {
+async fn handle_client(stream: UnixStream, tx: broadcast::Sender<Requests>) -> Result<()> {
+    let mut reader = BufReader::new(stream);
     let mut buf = Vec::new();
-    stream.read_to_end(&mut buf).await?;
-    let request: Requests = postcard::from_bytes_cobs(&mut buf)?;
+    reader.read_to_end(&mut buf).await?;
+
+    let request: Requests = postcard::from_bytes(&mut buf)?;
+    debug!("Sending to broadcast: {:?}", request);
     tx.send(request)?;
     Ok(())
 }

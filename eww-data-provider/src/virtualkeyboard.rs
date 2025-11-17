@@ -9,7 +9,7 @@ pub struct VirtualKeyboardListener {
 
 impl VirtualKeyboardListener {
     pub async fn start(&mut self) {
-        info!("Starting DunstListener");
+        info!("Starting VirtualKeyboardListener");
         loop {
             if let Ok(data) = self.channel.recv().await {
                 if data == Requests::VirtualKeyboard {

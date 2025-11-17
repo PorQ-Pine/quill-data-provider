@@ -8,6 +8,7 @@ pub mod player;
 pub mod requests;
 pub mod volume;
 pub mod virtualkeyboard;
+pub mod settingsmenu;
 
 use backlight::CoolBacklightListener;
 use backlight::WarmBacklightListener;
@@ -22,6 +23,7 @@ use tokio::sync::broadcast;
 use volume::VolumeListener;
 
 use crate::dunst::DunstListener;
+use crate::settingsmenu::SettingsMenuListener;
 use crate::virtualkeyboard::VirtualKeyboardListener;
 
 #[tokio::main]
@@ -48,6 +50,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut vkeyboard = VirtualKeyboardListener {channel: tx.subscribe()};
     tokio::spawn(async move {
         vkeyboard.start().await;
+    });
+
+    let mut settingsmenu = SettingsMenuListener {channel_rx: tx.subscribe(), channel_tx: tx.clone()};
+    tokio::spawn(async move {
+        settingsmenu.start().await;
     });
 
     let mut battery_state = BatteryStateListener;

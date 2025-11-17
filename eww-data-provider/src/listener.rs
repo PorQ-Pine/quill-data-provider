@@ -16,12 +16,12 @@ pub trait SocketHandler {
             match tokio::net::UnixStream::connect(&path).await {
                 Ok(stream) => {
                     info!("Successfully connected to socket: {}", socket_path);
-                    tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
                     return stream;
                 }
                 Err(_e) => {
                     // debug!("Waiting for socket at {}: {}", socket_path, e);
-                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(30)).await;
                 }
             }
         }
@@ -30,12 +30,12 @@ pub trait SocketHandler {
     async fn start(&mut self, unix: &mut tokio::net::UnixStream);
 
     async fn send_unix(&self, unix: &mut tokio::net::UnixStream, mut str: String) {
-        // debug!("To {:?} sending: {}", unix.peer_addr(), str);
+        debug!("To {:?} sending: {}", unix.peer_addr(), str);
         str.push('\n');
         if let Err(e) = unix.write_all(str.as_bytes()).await {
             error!("Failed to write to socket: {}", e);
             *unix = self.open_socket().await;
-            sleep(Duration::from_millis(100)).await;
+            sleep(Duration::from_millis(3)).await;
             self.send_unix(unix, str).await;
         }
     }

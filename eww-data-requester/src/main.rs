@@ -73,6 +73,7 @@ fn main() -> io::Result<()> {
             let request = match request_type.as_str() {
                 "notifications" => Requests::Notifications,
                 "virtualkeyboard" => Requests::VirtualKeyboard,
+                "settingsmenu" => Requests::SettingsMenu,
                 _ => {
                     eprintln!("Unknown request type: {}", request_type);
                     std::process::exit(1);

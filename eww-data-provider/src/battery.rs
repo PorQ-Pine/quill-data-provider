@@ -1,17 +1,19 @@
-use crate::{consts::BATTERY_DEVICE, listener::SocketHandler};
+use crate::listener::SocketHandler;
+use async_trait::async_trait;
+use log::*;
 use std::path::PathBuf;
 use tokio::{
     fs::read_to_string,
     io::{AsyncBufReadExt, BufReader},
     process::Command,
 };
-use log::*;
-use async_trait::async_trait;
+
+pub const BATTERY_DEVICE: &'static str = "rk817-battery";
 
 async fn get_battery_info(path: &PathBuf) -> String {
     read_to_string(path)
         .await
-        .unwrap_or_else(|_| panic!("Failed to read battery info from {:?}", path))
+        .unwrap_or_else(|_| String::from("50"))
         .trim()
         .to_string()
 }

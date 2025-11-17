@@ -1,7 +1,6 @@
 pub mod backlight;
 pub mod battery;
 pub mod bluetooth;
-pub mod consts;
 pub mod dunst;
 pub mod listener;
 pub mod network;

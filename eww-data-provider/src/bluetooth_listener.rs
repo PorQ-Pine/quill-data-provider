@@ -1,5 +1,11 @@
-use serde::{Serialize, Deserialize};
+use async_trait::async_trait;
+use log::*;
+use tokio::io::AsyncBufReadExt;
+use tokio::io::BufReader;
 use tokio::process::Command;
+
+use crate::listener::SocketHandler;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BluetoothStatus {
@@ -89,4 +95,45 @@ pub async fn get_bt() -> String {
     }
 
     serde_json::to_string(&status).unwrap()
+}
+
+pub struct BluetoothListener;
+
+#[async_trait]
+impl SocketHandler for BluetoothListener {
+    const SOCKET_NAME: &'static str = "bluetooth";
+
+    async fn start(&self, unix: &mut tokio::net::UnixStream) {
+        info!("Starting Bluetooth listener");
+
+        let mut cmd = Command::new("bluetoothctl")
+            .arg("--monitor")
+            .stdout(std::process::Stdio::piped())
+            .spawn()
+            .expect("Failed to spawn bluetoothctl monitor command");
+
+        let stdout = cmd.stdout.take().expect("Failed to take stdout");
+        let mut reader = BufReader::new(stdout).lines();
+
+        let mut previous_bt = get_bt().await;
+        self.send_unix(unix, previous_bt.clone()).await;
+
+        while let Some(line) = reader
+            .next_line()
+            .await
+            .expect("Failed to read line from bluetoothctl monitor")
+        {
+            // debug!("bluetoothctl monitor line: {}", line);
+            if line.contains("Powered:") || line.contains("Connected:") || line.contains("RSSI:") {
+                info!("Bluetooth event detected: {}", line);
+                let bt_status = get_bt().await;
+                if previous_bt != bt_status {
+                    self.send_unix(unix, bt_status.clone()).await;
+                    previous_bt = bt_status;
+                } else {
+                    debug!("Bluetooth info is the same");
+                }
+            }
+        }
+    }
 }

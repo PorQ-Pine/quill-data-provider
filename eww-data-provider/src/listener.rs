@@ -1,6 +1,8 @@
+use async_trait::async_trait;
 use log::*;
+use tokio::io::AsyncWriteExt;
 
-#[allow(async_fn_in_trait)]
+#[async_trait]
 pub trait SocketHandler {
     const SOCKET_NAME: &'static str;
 
@@ -15,13 +17,21 @@ pub trait SocketHandler {
                     tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
                     return stream;
                 }
-                Err(e) => {
-                    debug!("Waiting for socket at {}: {}", socket_path, e);
+                Err(_e) => {
+                    // debug!("Waiting for socket at {}: {}", socket_path, e);
                     tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
                 }
             }
         }
     }
 
-    async fn start(&self, unix: tokio::net::UnixStream);
+    async fn start(&self, unix: &mut tokio::net::UnixStream);
+
+    async fn send_unix(&self, unix: &mut tokio::net::UnixStream, mut str: String) {
+        str.push('\n');
+        if let Err(e) = unix.write_all(str.as_bytes()).await {
+            error!("Failed to write to socket: {}", e);
+            *unix = self.open_socket().await;
+        }
+    }
 }

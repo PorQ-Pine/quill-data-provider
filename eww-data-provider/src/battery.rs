@@ -2,17 +2,18 @@ use crate::{consts::BATTERY_DEVICE, listener::SocketHandler};
 use std::path::PathBuf;
 use tokio::{
     fs::read_to_string,
-    io::AsyncWriteExt,
     time::{Duration, interval},
 };
 use log::*;
+use async_trait::async_trait;
 
 pub struct BatteryStateListener;
 
+#[async_trait]
 impl SocketHandler for BatteryStateListener {
     const SOCKET_NAME: &'static str = "battery_state";
 
-    async fn start(&self, mut unix: tokio::net::UnixStream) {
+    async fn start(&self, unix: &mut tokio::net::UnixStream) {
         let mut path = PathBuf::from("/sys/class/power_supply/");
         path.push(BATTERY_DEVICE);
         path.push("status");
@@ -30,9 +31,7 @@ impl SocketHandler for BatteryStateListener {
             if last_content.as_ref() != Some(&content) {
                 if !content.is_empty() {
                     debug!("Writing state: {}", content);
-                    unix.write_all(format!("{}\n", content).as_bytes())
-                        .await
-                        .expect("Failed to write to socket");
+                    self.send_unix(unix, content.clone()).await;
                 }
                 last_content = Some(content);
             }
@@ -42,10 +41,11 @@ impl SocketHandler for BatteryStateListener {
 
 pub struct BatteryPercentListener;
 
+#[async_trait]
 impl SocketHandler for BatteryPercentListener {
     const SOCKET_NAME: &'static str = "battery_percent";
 
-    async fn start(&self, mut unix: tokio::net::UnixStream) {
+    async fn start(&self, unix: &mut tokio::net::UnixStream) {
         let mut path = PathBuf::from("/sys/class/power_supply/");
         path.push(BATTERY_DEVICE);
         path.push("capacity");
@@ -62,9 +62,7 @@ impl SocketHandler for BatteryPercentListener {
 
             if last_content.as_ref() != Some(&content) {
                 if !content.is_empty() {
-                    unix.write_all(content.as_bytes())
-                        .await
-                        .expect("Failed to write to socket");
+                    self.send_unix(unix, content.clone()).await;
                 }
                 last_content = Some(content);
             }

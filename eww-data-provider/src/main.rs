@@ -1,10 +1,11 @@
 pub mod listener;
 pub mod consts;
 pub mod battery;
-pub mod bluetooth;
+pub mod bluetooth_listener;
 
 use listener::SocketHandler;
 use battery::{BatteryStateListener, BatteryPercentListener};
+use bluetooth_listener::BluetoothListener;
 use log::*;
 
 #[tokio::main]
@@ -14,12 +15,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let battery_state = BatteryStateListener;
     tokio::spawn(async move {
-        battery_state.start(battery_state.open_socket().await).await;
+        let mut socket = battery_state.open_socket().await;
+        battery_state.start(&mut socket).await;
     });
 
     let battery_percent = BatteryPercentListener;
     tokio::spawn(async move {
-        // battery_percent.start(battery_percent.open_socket().await).await;
+        let mut socket = battery_percent.open_socket().await;
+        battery_percent.start(&mut socket).await;
+    });
+
+    let bluetooth_listener = BluetoothListener;
+    tokio::spawn(async move {
+        let mut socket = bluetooth_listener.open_socket().await;
+        bluetooth_listener.start(&mut socket).await;
     });
 
     tokio::signal::ctrl_c().await.expect("failed to listen for event");

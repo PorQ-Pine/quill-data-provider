@@ -1,6 +1,6 @@
 use std::env;
 use std::fs;
-use std::io::{self, BufReader, BufRead};
+use std::io::{self, BufRead, BufReader};
 use std::os::unix::net::UnixListener;
 use std::path::Path;
 
@@ -33,7 +33,10 @@ fn main() -> io::Result<()> {
                 let mut reader = BufReader::new(stream);
                 let mut line = String::new();
                 while reader.read_line(&mut line)? > 0 {
-                    print!("{}", line);
+                    line = line.trim().to_string();
+                    if !line.is_empty() {
+                        print!("{}", line);
+                    }
                     line.clear();
                 }
             }

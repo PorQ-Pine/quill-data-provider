@@ -22,7 +22,7 @@ pub struct BatteryStateListener;
 impl SocketHandler for BatteryStateListener {
     const SOCKET_NAME: &'static str = "battery_state";
 
-    async fn start(&self, unix: &mut tokio::net::UnixStream) {
+    async fn start(&mut self, unix: &mut tokio::net::UnixStream) {
         info!("Starting BatteryStateListener");
         let mut path = PathBuf::from("/sys/class/power_supply/");
         path.push(BATTERY_DEVICE);
@@ -67,7 +67,7 @@ pub struct BatteryPercentListener;
 impl SocketHandler for BatteryPercentListener {
     const SOCKET_NAME: &'static str = "battery_percent";
 
-    async fn start(&self, unix: &mut tokio::net::UnixStream) {
+    async fn start(&mut self, unix: &mut tokio::net::UnixStream) {
         info!("Starting BatteryPercentListener");
         let mut path = PathBuf::from("/sys/class/power_supply/");
         path.push(BATTERY_DEVICE);

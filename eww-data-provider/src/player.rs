@@ -99,7 +99,7 @@ pub struct PlayerListener;
 impl SocketHandler for PlayerListener {
     const SOCKET_NAME: &'static str = "player";
 
-    async fn start(&self, unix: &mut tokio::net::UnixStream) {
+    async fn start(&mut self, unix: &mut tokio::net::UnixStream) {
         info!("Starting PlayerListener");
 
         let mut cmd = Command::new("playerctl")

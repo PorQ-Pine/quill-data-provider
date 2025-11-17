@@ -64,7 +64,7 @@ pub struct NetworkListener;
 impl SocketHandler for NetworkListener {
     const SOCKET_NAME: &'static str = "network";
 
-    async fn start(&self, unix: &mut tokio::net::UnixStream) {
+    async fn start(&mut self, unix: &mut tokio::net::UnixStream) {
         info!("Starting NetworkListener");
 
         let mut previous_network_info = get_network_info().await;

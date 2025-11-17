@@ -12,7 +12,7 @@ pub struct VolumeListener;
 impl SocketHandler for VolumeListener {
     const SOCKET_NAME: &'static str = "volume";
 
-    async fn start(&self, unix: &mut tokio::net::UnixStream) {
+    async fn start(&mut self, unix: &mut tokio::net::UnixStream) {
         info!("Starting VolumeListener");
 
         async fn get_current_volume() -> String {

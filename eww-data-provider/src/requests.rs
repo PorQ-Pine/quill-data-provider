@@ -2,7 +2,7 @@ use anyhow::Result;
 use enums::Requests;
 use log::*;
 use tokio::{
-    io::{AsyncBufReadExt, AsyncReadExt, BufReader},
+    io::{AsyncReadExt, BufReader},
     net::{UnixListener, UnixStream},
     sync::broadcast,
 };

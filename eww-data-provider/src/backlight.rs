@@ -24,7 +24,7 @@ pub struct CoolBacklightListener;
 impl SocketHandler for CoolBacklightListener {
     const SOCKET_NAME: &'static str = "backlight_cool";
 
-    async fn start(&self, unix: &mut tokio::net::UnixStream) {
+    async fn start(&mut self, unix: &mut tokio::net::UnixStream) {
         info!("Starting CoolBacklightListener");
         let mut path = PathBuf::from(PATH_BASE);
         path.push(Self::SOCKET_NAME);
@@ -69,7 +69,7 @@ pub struct WarmBacklightListener;
 impl SocketHandler for WarmBacklightListener {
     const SOCKET_NAME: &'static str = "backlight_warm";
 
-    async fn start(&self, unix: &mut tokio::net::UnixStream) {
+    async fn start(&mut self, unix: &mut tokio::net::UnixStream) {
         info!("Starting WarmBacklightListener");
         let mut path = PathBuf::from(PATH_BASE);
         path.push(Self::SOCKET_NAME);

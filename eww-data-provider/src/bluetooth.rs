@@ -103,7 +103,7 @@ pub struct BluetoothListener;
 impl SocketHandler for BluetoothListener {
     const SOCKET_NAME: &'static str = "bluetooth";
 
-    async fn start(&self, unix: &mut tokio::net::UnixStream) {
+    async fn start(&mut self, unix: &mut tokio::net::UnixStream) {
         info!("Starting Bluetooth listener");
 
         let mut cmd = Command::new("bluetoothctl")

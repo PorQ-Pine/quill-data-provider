@@ -1,6 +1,13 @@
+use std::time::Duration;
+
+use async_trait::async_trait;
+use enums::Requests;
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 use serde_json;
-use tokio::process::Command;
+use tokio::{process::Command, time::sleep};
+
+use crate::listener::SocketHandler;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct DunstNotification {
@@ -40,7 +47,8 @@ struct DunstHistory {
 pub async fn get_dunst_info() -> String {
     let paused_output = Command::new("dunstctl")
         .arg("get-pause-level")
-        .output().await
+        .output()
+        .await
         .unwrap();
 
     let paused_level = String::from_utf8_lossy(&paused_output.stdout)
@@ -49,7 +57,11 @@ pub async fn get_dunst_info() -> String {
         .unwrap();
     let paused = paused_level == 1;
 
-    let history_output = Command::new("dunstctl").arg("history").output().await.unwrap();
+    let history_output = Command::new("dunstctl")
+        .arg("history")
+        .output()
+        .await
+        .unwrap();
 
     let history_json_str = String::from_utf8_lossy(&history_output.stdout);
     let dunst_history: DunstHistory = serde_json::from_str(&history_json_str).unwrap();
@@ -82,4 +94,28 @@ pub async fn get_dunst_info() -> String {
         Ok(json) => return json,
         Err(_) => return String::from("{\"paused\": false, \"notifications\": []}"),
     };
+}
+
+pub struct DunstListener {
+    pub channel: tokio::sync::broadcast::Receiver<Requests>,
+}
+
+#[async_trait]
+impl SocketHandler for DunstListener {
+    const SOCKET_NAME: &'static str = "battery_state";
+
+    async fn start(&mut self, unix: &mut tokio::net::UnixStream) {
+        info!("Starting DunstListener");
+
+        loop {
+            if let Ok(data) = self.channel.recv().await {
+                if data == Requests::Notifications {
+                    self.send_unix(unix, get_dunst_info().await).await;
+                }
+            } else {
+                error!("Failed to recv");
+                sleep(Duration::from_secs(1)).await;
+            }
+        }
+    }
 }

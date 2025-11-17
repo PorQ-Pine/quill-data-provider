@@ -1,11 +1,11 @@
 use crate::listener::SocketHandler;
 use async_trait::async_trait;
 use log::*;
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Duration};
 use tokio::{
     fs::read_to_string,
     io::{AsyncBufReadExt, BufReader},
-    process::Command,
+    process::Command, time::sleep,
 };
 
 pub const BATTERY_DEVICE: &'static str = "rk817-battery";
@@ -44,21 +44,22 @@ impl SocketHandler for BatteryStateListener {
         let stdout = cmd.stdout.take().expect("Failed to take stdout");
         let mut reader = BufReader::new(stdout).lines();
 
-        while let Some(line) = reader
+        while let Some(_line) = reader
             .next_line()
             .await
             .expect("Failed to read line from udevadm monitor")
         {
-            if line.contains("ACTION=change") {
-                info!("Battery state change event detected");
-                let current_state = get_battery_info(&path).await;
-                if previous_state != current_state {
-                    self.send_unix(unix, current_state.clone()).await;
-                    previous_state = current_state;
-                } else {
-                    debug!("Battery state is the same");
-                }
+            // if line.contains("ACTION=change") {
+            sleep(Duration::from_millis(250)).await;
+            info!("Battery state change event detected");
+            let current_state = get_battery_info(&path).await;
+            if previous_state != current_state {
+                self.send_unix(unix, current_state.clone()).await;
+                previous_state = current_state;
+            } else {
+                debug!("Battery state is the same");
             }
+            // }
         }
     }
 }
@@ -89,21 +90,22 @@ impl SocketHandler for BatteryPercentListener {
         let stdout = cmd.stdout.take().expect("Failed to take stdout");
         let mut reader = BufReader::new(stdout).lines();
 
-        while let Some(line) = reader
+        while let Some(_line) = reader
             .next_line()
             .await
             .expect("Failed to read line from udevadm monitor")
         {
-            if line.contains("ACTION=change") {
-                info!("Battery percent change event detected");
-                let current_percent = get_battery_info(&path).await;
-                if previous_percent != current_percent {
-                    self.send_unix(unix, current_percent.clone()).await;
-                    previous_percent = current_percent;
-                } else {
-                    debug!("Battery percent is the same");
-                }
+            // if line.contains("ACTION=change") {
+            sleep(Duration::from_millis(250)).await;
+            info!("Battery percent change event detected");
+            let current_percent = get_battery_info(&path).await;
+            if previous_percent != current_percent {
+                self.send_unix(unix, current_percent.clone()).await;
+                previous_percent = current_percent;
+            } else {
+                debug!("Battery percent is the same");
             }
+            // }
         }
     }
 }

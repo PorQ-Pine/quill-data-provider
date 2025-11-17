@@ -27,7 +27,7 @@ use crate::dunst::DunstListener;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("none")).init();
     debug!("Starting eww-data-provider");
 
     let (tx, _rx) = broadcast::channel::<Requests>(16);

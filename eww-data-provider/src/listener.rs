@@ -28,6 +28,7 @@ pub trait SocketHandler {
     async fn start(&self, unix: &mut tokio::net::UnixStream);
 
     async fn send_unix(&self, unix: &mut tokio::net::UnixStream, mut str: String) {
+        // debug!("To {:?} sending: {}", unix.peer_addr(), str);
         str.push('\n');
         if let Err(e) = unix.write_all(str.as_bytes()).await {
             error!("Failed to write to socket: {}", e);

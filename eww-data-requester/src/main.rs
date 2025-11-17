@@ -33,9 +33,10 @@ fn main() -> io::Result<()> {
                 let mut reader = BufReader::new(stream);
                 let mut line = String::new();
                 while reader.read_line(&mut line)? > 0 {
-                    line = line.trim().to_string();
-                    if !line.is_empty() {
-                        print!("{}", line);
+                    let mut line_copy = line.clone();
+                    line_copy = line_copy.trim().to_string();
+                    if !line_copy.is_empty() {
+                        println!("{}", line_copy);
                     }
                     line.clear();
                 }

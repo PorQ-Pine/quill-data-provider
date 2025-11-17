@@ -1,11 +1,6 @@
 use std::time::Duration;
-
-use crate::listener::SocketHandler;
-use async_trait::async_trait;
 use enums::Requests;
 use log::{error, info, warn};
-use serde::{Deserialize, Serialize};
-use serde_json;
 use tokio::{process::Command, time::sleep};
 
 pub struct VirtualKeyboardListener {

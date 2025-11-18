@@ -32,18 +32,17 @@ struct PlayerOutput {
 }
 
 async fn process_player_metadata(raw_json: &str) -> String {
-    let raw_metadata: PlayerctlMetadata =
-        serde_json::from_str(raw_json).unwrap_or_else(|e| {
-            error!("Failed to parse playerctl JSON: {} - {}", e, raw_json);
-            PlayerctlMetadata {
-                name: None,
-                title: None,
-                artist: None,
-                art_url: None,
-                status: None,
-                length: None,
-            }
-        });
+    let raw_metadata: PlayerctlMetadata = serde_json::from_str(raw_json).unwrap_or_else(|e| {
+        error!("Failed to parse playerctl JSON: {} - {}", e, raw_json);
+        PlayerctlMetadata {
+            name: None,
+            title: None,
+            artist: None,
+            art_url: None,
+            status: None,
+            length: None,
+        }
+    });
 
     let name = raw_metadata.name.unwrap_or_default();
     let title = raw_metadata.title.unwrap_or_default();
@@ -59,7 +58,10 @@ async fn process_player_metadata(raw_json: &str) -> String {
     };
 
     if art_url.starts_with("file://") {
-        art_url = art_url.strip_prefix("file://").unwrap_or(&art_url).to_string();
+        art_url = art_url
+            .strip_prefix("file://")
+            .unwrap_or(&art_url)
+            .to_string();
     }
 
     let length_str = if let Some(l_us) = length_us {
@@ -114,15 +116,14 @@ impl SocketHandler for PlayerListener {
         let stdout = cmd.stdout.take().expect("Failed to take stdout");
         let mut reader = BufReader::new(stdout).lines();
 
-        let initial_line = reader
-            .next_line()
-            .await
-            .expect("Failed to read initial line from playerctl monitor")
-            .expect("playerctl monitor did not output an initial line");
-        let initial_state = process_player_metadata(&initial_line).await;
-        self.send_unix(unix, initial_state.clone()).await;
-
-        let mut previous_player_info = initial_state;
+        let mut previous_player_info = String::new();
+        if let Some(initial) = reader.next_line().await.unwrap_or(None) {
+            if !initial.is_empty() {
+                let initial_state = process_player_metadata(&initial).await;
+                self.send_unix(unix, initial_state.clone()).await;
+                previous_player_info = initial_state;
+            }
+        }
 
         while let Some(line) = reader
             .next_line()

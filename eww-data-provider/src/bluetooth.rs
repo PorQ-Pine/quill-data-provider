@@ -2,8 +2,6 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use log::*;
-use tokio::io::AsyncBufReadExt;
-use tokio::io::BufReader;
 use tokio::process::Command;
 use tokio::time::sleep;
 
@@ -108,25 +106,28 @@ impl SocketHandler for BluetoothListener {
 
     async fn start(&mut self, unix: &mut tokio::net::UnixStream) {
         info!("Starting Bluetooth listener");
+        // Idk
 
-        let mut cmd = Command::new("bluetoothctl")
-            .arg("--monitor")
-            .stdout(std::process::Stdio::piped())
-            .spawn()
-            .expect("Failed to spawn bluetoothctl monitor command");
+        /*
+               sleep(Duration::from_secs(5)).await;
 
-        let stdout = cmd.stdout.take().expect("Failed to take stdout");
-        let mut reader = BufReader::new(stdout).lines();
+               let mut cmd = Command::new("bluetoothctl")
+                   .arg("--monitor")
+                   .stdout(std::process::Stdio::piped())
+                   .spawn()
+                   .expect("Failed to spawn bluetoothctl monitor command");
 
-        let mut previous_bt = get_bt().await;
-        self.send_unix(unix, previous_bt.clone()).await;
+               let stdout = cmd.stdout.take().expect("Failed to take stdout");
+               let mut reader = BufReader::new(stdout).lines();
+        */
 
+        /*
         while let Some(line) = reader
             .next_line()
             .await
             .expect("Failed to read line from bluetoothctl monitor")
         {
-            // debug!("bluetoothctl monitor line: {}", line);
+            debug!("bluetoothctl monitor line: {}", line);
             if line.contains("Powered") || line.contains("Connected") || line.contains("RSSI:") || line.contains("PowerState") {
                 info!("Bluetooth event detected: {}", line);
                 sleep(Duration::from_millis(200)).await;
@@ -138,6 +139,24 @@ impl SocketHandler for BluetoothListener {
                     debug!("Bluetooth info is the same");
                 }
             }
+        }
+        */
+        let mut last_bluetooth_line = String::new();
+        loop {
+            let output = Command::new("rfkill")
+                .output()
+                .await
+                .expect("failed to execute rfkill");
+            let output_str = String::from_utf8_lossy(&output.stdout);
+            if let Some(bt_line) = output_str.lines().find(|l| l.contains("bluetooth")) {
+                if bt_line != last_bluetooth_line {
+                    debug!("Bluetooth changed: {}", bt_line);
+                    self.send_unix(unix, get_bt().await).await;
+
+                    last_bluetooth_line = bt_line.to_string();
+                }
+            }
+            sleep(Duration::from_secs(1)).await;
         }
     }
 }

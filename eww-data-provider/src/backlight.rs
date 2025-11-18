@@ -54,7 +54,7 @@ impl SocketHandler for CoolBacklightListener {
             // info!("Backlight change event detected");
             sleep(Duration::from_millis(5)).await;
             let current_brightness = get_brightness(&path).await;
-            debug!("current_brightness: {}, previous_brightness: {}", current_brightness, previous_brightness);
+            // debug!("current_brightness: {}, previous_brightness: {}", current_brightness, previous_brightness);
             if previous_brightness != current_brightness {
                 debug!("Sending cool brightness: {}", current_brightness);
                 let new_brightness = ((current_brightness.parse::<u16>().unwrap() * 100 / 255) as u8).to_string();

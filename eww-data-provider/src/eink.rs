@@ -20,9 +20,9 @@ enum DriverMode {
 // Only matters in Normal mode
 // busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 DefaultHintHr s "Y1|T|R"
 enum BitDepth {
-    Y1(Conversion, Redraw),
+    Y1(Conversion),
     Y2(Conversion, Redraw),
-    Y4,
+    Y4(Redraw),
 }
 
 enum Conversion {

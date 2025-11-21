@@ -74,6 +74,8 @@ fn main() -> io::Result<()> {
                 "notifications" => Requests::Notifications,
                 "virtualkeyboard" => Requests::VirtualKeyboard,
                 "settingsmenu" => Requests::SettingsMenu,
+                "refresh" => Requests::ScreenRefresh,
+                "screen_settings" => Requests::ScreenSettings,
                 _ => {
                     eprintln!("Unknown request type: {}", request_type);
                     std::process::exit(1);

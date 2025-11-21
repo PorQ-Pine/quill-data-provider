@@ -2,14 +2,15 @@ pub mod backlight;
 pub mod battery;
 pub mod bluetooth;
 pub mod dunst;
+pub mod eink;
+pub mod eink_listener;
 pub mod listener;
 pub mod network;
 pub mod player;
 pub mod requests;
-pub mod volume;
-pub mod virtualkeyboard;
 pub mod settingsmenu;
-pub mod eink;
+pub mod virtualkeyboard;
+pub mod volume;
 
 use backlight::CoolBacklightListener;
 use backlight::WarmBacklightListener;
@@ -24,6 +25,7 @@ use tokio::sync::broadcast;
 use volume::VolumeListener;
 
 use crate::dunst::DunstListener;
+use crate::eink_listener::EinkListener;
 use crate::settingsmenu::SettingsMenuListener;
 use crate::virtualkeyboard::VirtualKeyboardListener;
 
@@ -42,18 +44,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let mut dunst = DunstListener {channel: tx.subscribe()};
+    let mut dunst = DunstListener {
+        channel: tx.subscribe(),
+    };
     tokio::spawn(async move {
         let mut socket = dunst.open_socket().await;
         dunst.start(&mut socket).await;
     });
 
-    let mut vkeyboard = VirtualKeyboardListener {channel: tx.subscribe()};
+    let mut vkeyboard = VirtualKeyboardListener {
+        channel: tx.subscribe(),
+    };
     tokio::spawn(async move {
         vkeyboard.start().await;
     });
 
-    let mut settingsmenu = SettingsMenuListener {channel_rx: tx.subscribe(), channel_tx: tx.clone()};
+    let mut eink = EinkListener {
+        channel_rx: tx.subscribe(),
+    };
+    tokio::spawn(async move {
+        eink.start().await;
+    });
+
+    let mut settingsmenu = SettingsMenuListener {
+        channel_rx: tx.subscribe(),
+        channel_tx: tx.clone(),
+    };
     tokio::spawn(async move {
         settingsmenu.start().await;
     });

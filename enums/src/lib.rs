@@ -5,4 +5,6 @@ pub enum Requests {
     Notifications,
     VirtualKeyboard,
     SettingsMenu,
+    ScreenRefresh,
+    ScreenSettings,
 }

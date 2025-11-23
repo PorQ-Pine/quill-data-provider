@@ -19,7 +19,9 @@ async fn get_battery_info(path: &PathBuf) -> String {
         .to_string()
 }
 
-pub struct BatteryStateListener;
+pub struct BatteryStateListener {
+    pub channel_tx: tokio::sync::mpsc::Sender<()>,
+}
 
 #[async_trait]
 impl SocketHandler for BatteryStateListener {
@@ -50,22 +52,24 @@ impl SocketHandler for BatteryStateListener {
                 _ = reader.next_line() => {},
                 _ = sleep(Duration::from_secs(10)) => {}
             }
-            // if line.contains("ACTION=change") {
             sleep(Duration::from_millis(100)).await;
-            info!("Battery state change event detected");
+            self.channel_tx.send(()).await.unwrap();
+            // debug!("Battery state change event detected");
             let current_state = get_battery_info(&path).await;
             if previous_state != current_state {
+                debug!("Battery state changed, sending");
                 self.send_unix(unix, current_state.clone()).await;
                 previous_state = current_state;
             } else {
-                debug!("Battery state is the same");
+                // debug!("Battery state is the same");
             }
-            // }
         }
     }
 }
 
-pub struct BatteryPercentListener;
+pub struct BatteryPercentListener {
+    pub channel_rx: tokio::sync::mpsc::Receiver<()>,
+}
 
 #[async_trait]
 impl SocketHandler for BatteryPercentListener {
@@ -80,35 +84,25 @@ impl SocketHandler for BatteryPercentListener {
         let mut previous_percent = get_battery_info(&path).await;
         self.send_unix(unix, previous_percent.clone()).await;
 
-        let mut cmd = Command::new("udevadm")
-            .arg("monitor")
-            .arg("--subsystem-match=power_supply")
-            .arg("--property")
-            .stdout(std::process::Stdio::piped())
-            .spawn()
-            .expect("Failed to spawn udevadm monitor command");
-
-        let stdout = cmd.stdout.take().expect("Failed to take stdout");
-        let mut reader = BufReader::new(stdout).lines();
-
         loop {
-            tokio::select! {
-                _ = reader.next_line() => {},
-                _ = sleep(Duration::from_secs(10)) => {}
-            }
+            self.channel_rx.recv().await;
+            sleep(Duration::from_millis(100)).await;
 
-            sleep(Duration::from_millis(300)).await;
-            info!("Battery percent change event detected");
+            // debug!("Battery percent change event detected");
             let current_percent = get_battery_info(&path).await;
+            /*
+            debug!(
+                "Battery percent current: {}, previous: {}",
+                current_percent, previous_percent
+            );
+            */
             if previous_percent != current_percent {
+                debug!("Battery percent changed, sending");
                 self.send_unix(unix, current_percent.clone()).await;
                 previous_percent = current_percent;
             } else {
-                debug!("Battery percent is the same");
+                // debug!("Battery percent is the same");
             }
-
-            // Clear it
-            while reader.next_line().await.is_ok() {}
         }
     }
 }

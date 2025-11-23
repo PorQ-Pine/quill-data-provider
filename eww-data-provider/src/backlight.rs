@@ -58,7 +58,7 @@ impl SocketHandler for CoolBacklightListener {
                 self.send_unix(unix, new_brightness).await;
                 previous_brightness = current_brightness;
             } else {
-                debug!("Backlight brightness is the same");
+                // debug!("Backlight brightness is the same");
             }
         }
     }
@@ -103,7 +103,7 @@ impl SocketHandler for WarmBacklightListener {
                 self.send_unix(unix, new_brightness).await;
                 previous_brightness = current_brightness;
             } else {
-                debug!("Backlight brightness is the same");
+                // debug!("Backlight brightness is the same");
             }
         }
     }

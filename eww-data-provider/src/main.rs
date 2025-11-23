@@ -74,13 +74,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         settingsmenu.start().await;
     });
 
-    let mut battery_state = BatteryStateListener;
+    let channel = tokio::sync::mpsc::channel(10);
+    let mut battery_state = BatteryStateListener { channel_tx: channel.0 };
     tokio::spawn(async move {
         let mut socket = battery_state.open_socket().await;
         battery_state.start(&mut socket).await;
     });
 
-    let mut battery_percent = BatteryPercentListener;
+    let mut battery_percent = BatteryPercentListener { channel_rx: channel.1 };
     tokio::spawn(async move {
         let mut socket = battery_percent.open_socket().await;
         battery_percent.start(&mut socket).await;

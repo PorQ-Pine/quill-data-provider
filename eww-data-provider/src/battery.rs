@@ -5,7 +5,8 @@ use std::{path::PathBuf, time::Duration};
 use tokio::{
     fs::read_to_string,
     io::{AsyncBufReadExt, BufReader},
-    process::Command, time::sleep,
+    process::Command,
+    time::sleep,
 };
 
 pub const BATTERY_DEVICE: &'static str = "rk817-battery";
@@ -44,11 +45,11 @@ impl SocketHandler for BatteryStateListener {
         let stdout = cmd.stdout.take().expect("Failed to take stdout");
         let mut reader = BufReader::new(stdout).lines();
 
-        while let Some(_line) = reader
-            .next_line()
-            .await
-            .expect("Failed to read line from udevadm monitor")
-        {
+        loop {
+            tokio::select! {
+                _ = reader.next_line() => {},
+                _ = sleep(Duration::from_secs(10)) => {}
+            }
             // if line.contains("ACTION=change") {
             sleep(Duration::from_millis(100)).await;
             info!("Battery state change event detected");
@@ -90,13 +91,13 @@ impl SocketHandler for BatteryPercentListener {
         let stdout = cmd.stdout.take().expect("Failed to take stdout");
         let mut reader = BufReader::new(stdout).lines();
 
-        while let Some(_line) = reader
-            .next_line()
-            .await
-            .expect("Failed to read line from udevadm monitor")
-        {
-            // if line.contains("ACTION=change") {
-            sleep(Duration::from_millis(250)).await;
+        loop {
+            tokio::select! {
+                _ = reader.next_line() => {},
+                _ = sleep(Duration::from_secs(10)) => {}
+            }
+
+            sleep(Duration::from_millis(300)).await;
             info!("Battery percent change event detected");
             let current_percent = get_battery_info(&path).await;
             if previous_percent != current_percent {
@@ -105,7 +106,9 @@ impl SocketHandler for BatteryPercentListener {
             } else {
                 debug!("Battery percent is the same");
             }
-            // }
+
+            // Clear it
+            while reader.next_line().await.is_ok() {}
         }
     }
 }

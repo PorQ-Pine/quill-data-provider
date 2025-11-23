@@ -307,7 +307,7 @@ impl RenderHint {
 
     pub async fn set(&self) {
         let line = format!(
-            "busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 DefaultHintHr y {}",
+            "busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 DefaultHintHr s {}",
             self.to_string()
         );
         run_cmd(&line).await;

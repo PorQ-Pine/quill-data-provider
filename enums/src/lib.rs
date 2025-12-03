@@ -7,4 +7,5 @@ pub enum Requests {
     SettingsMenu,
     ScreenRefresh,
     ScreenSettings,
+    GammaLevel,
 }

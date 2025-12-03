@@ -76,6 +76,7 @@ fn main() -> io::Result<()> {
                 "settingsmenu" => Requests::SettingsMenu,
                 "refresh" => Requests::ScreenRefresh,
                 "screen_settings" => Requests::ScreenSettings,
+                "gamma_update" => Requests::GammaLevel,
                 _ => {
                     eprintln!("Unknown request type: {}", request_type);
                     std::process::exit(1);

@@ -4,6 +4,7 @@ pub mod bluetooth;
 pub mod dunst;
 pub mod eink;
 pub mod eink_listener;
+pub mod gamma;
 pub mod listener;
 pub mod network;
 pub mod player;
@@ -26,6 +27,7 @@ use volume::VolumeListener;
 
 use crate::dunst::DunstListener;
 use crate::eink_listener::EinkListener;
+use crate::gamma::GammaListener;
 use crate::settingsmenu::SettingsMenuListener;
 use crate::virtualkeyboard::VirtualKeyboardListener;
 
@@ -66,6 +68,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         eink.start().await;
     });
 
+    let mut gamma = GammaListener {channel_rx:tx.subscribe(),child:None, current_gamma: 0 };
+    tokio::spawn(async move {
+        gamma.start().await;
+    });
+
     let mut settingsmenu = SettingsMenuListener {
         channel_rx: tx.subscribe(),
         channel_tx: tx.clone(),
@@ -75,13 +82,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let channel = tokio::sync::mpsc::channel(10);
-    let mut battery_state = BatteryStateListener { channel_tx: channel.0 };
+    let mut battery_state = BatteryStateListener {
+        channel_tx: channel.0,
+    };
     tokio::spawn(async move {
         let mut socket = battery_state.open_socket().await;
         battery_state.start(&mut socket).await;
     });
 
-    let mut battery_percent = BatteryPercentListener { channel_rx: channel.1 };
+    let mut battery_percent = BatteryPercentListener {
+        channel_rx: channel.1,
+    };
     tokio::spawn(async move {
         let mut socket = battery_percent.open_socket().await;
         battery_percent.start(&mut socket).await;

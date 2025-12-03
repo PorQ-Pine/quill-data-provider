@@ -1,6 +1,6 @@
-use std::time::Duration;
 use enums::Requests;
 use log::{error, info, warn};
+use std::time::Duration;
 use tokio::{process::Command, time::sleep};
 
 pub struct VirtualKeyboardListener {

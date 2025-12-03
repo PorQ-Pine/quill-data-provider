@@ -1,5 +1,4 @@
 use std::time::Duration;
-
 use enums::Requests;
 use log::{debug, error, info};
 use tokio::{
@@ -7,8 +6,16 @@ use tokio::{
     time::sleep,
 };
 
+pub const DEFAULT_GAMMA: u8 = 10;
+
+pub enum GammaControl {
+    Force(u8),
+    PreviousValue,
+}
+
 pub struct GammaListener {
     pub channel_rx: tokio::sync::broadcast::Receiver<Requests>,
+    pub internal_channel_rx: tokio::sync::mpsc::Receiver<GammaControl>,
     pub child: Option<Child>,
     pub current_gamma: u8,
 }
@@ -21,30 +28,57 @@ impl GammaListener {
         self.toggle_gamma(10).await;
 
         loop {
-            if let Ok(data) = self.channel_rx.recv().await {
-                match data {
-                    Requests::GammaLevel => {
-                        let res = Command::new("eww")
-                            .arg("--no-daemonize")
-                            .arg("get")
-                            .arg("thresholding_level_value")
-                            .output()
-                            .await;
-                        if let Ok(value) = &res {
-                            let vec = &value.stdout;
-                            let str = String::from_utf8_lossy(&vec).to_string();
-                            if let Ok(gamma_level) = str.trim().parse() {
-                                self.toggle_gamma(gamma_level).await;
-                            } else {
-                                error!("Failed to parse gamma level: {:?}", res);
-                            }
-                        } else {
-                            error!("Failed to get thresholding_level_value");
-                        }
-                        sleep(Duration::from_millis(25)).await;
-                    }
-                    _ => {}
+            tokio::select! {
+                res = self.channel_rx.recv() => {
+                    self.handle_channel_rx(res).await;
                 }
+                Some(gamma_value) = self.internal_channel_rx.recv() => {
+                    match gamma_value {
+                        GammaControl::Force(value) => {
+                            let previous = self.current_gamma;
+                            self.handle_internal_channel_rx(value).await;
+                            self.current_gamma = previous;
+                        },
+                        GammaControl::PreviousValue => {
+                            self.handle_internal_channel_rx(self.current_gamma).await
+                        },
+                    }
+                }
+            }
+        }
+    }
+
+    pub async fn handle_internal_channel_rx(&mut self, gamma_value: u8) {
+        self.toggle_gamma(gamma_value).await;
+    }
+
+    pub async fn handle_channel_rx(
+        &mut self,
+        res: Result<Requests, tokio::sync::broadcast::error::RecvError>,
+    ) {
+        if let Ok(data) = res {
+            match data {
+                Requests::GammaLevel => {
+                    let res = Command::new("eww")
+                        .arg("--no-daemonize")
+                        .arg("get")
+                        .arg("thresholding_level_value")
+                        .output()
+                        .await;
+                    if let Ok(value) = &res {
+                        let vec = &value.stdout;
+                        let str = String::from_utf8_lossy(&vec).to_string();
+                        if let Ok(gamma_level) = str.trim().parse() {
+                            self.toggle_gamma(gamma_level).await;
+                        } else {
+                            error!("Failed to parse gamma level: {:?}", res);
+                        }
+                    } else {
+                        error!("Failed to get thresholding_level_value");
+                    }
+                    sleep(Duration::from_millis(25)).await;
+                }
+                _ => {}
             }
         }
     }

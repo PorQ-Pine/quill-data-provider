@@ -2,6 +2,8 @@ use log::debug;
 use std::str::FromStr;
 use tokio::process::Command;
 
+use crate::gamma::{DEFAULT_GAMMA, GammaControl};
+
 // The mess of connected enums is so we know what affects when, so:
 // - We can set only what's needed
 // - We show only what can be changed
@@ -319,6 +321,7 @@ pub struct VisibleSettings {
     pub dithering: bool,
     pub bitdepth: bool,
     pub conversion: bool,
+    pub thresholding_level: bool,
     pub redraw: bool,
 }
 
@@ -339,6 +342,9 @@ impl VisibleSettings {
         }
         if parse_bool(state, "redraw") != self.redraw {
             updates.push(format!("redraw={}", self.redraw));
+        }
+        if parse_bool(state, "thresholding_level") != self.thresholding_level {
+            updates.push(format!("thresholding_level={}", self.redraw));
         }
 
         if !updates.is_empty() {
@@ -377,7 +383,10 @@ impl Dithering {
     }
 }
 
-pub async fn set_screen_settings(screen_settings: DriverMode) {
+pub async fn set_screen_settings(
+    screen_settings: DriverMode,
+    gamma_channel_tx: &mut tokio::sync::mpsc::Sender<GammaControl>,
+) {
     let current_render_hint = RenderHint::get_render_hint().await;
     let mut render_hint = current_render_hint;
     let mut visible_settings = VisibleSettings::default();
@@ -406,7 +415,15 @@ pub async fn set_screen_settings(screen_settings: DriverMode) {
             if let Some(conversion) = maybe_conversion {
                 visible_settings.conversion = true;
                 match conversion {
-                    Conversion::Tresholding => render_hint.conversion = PureConversion::Tresholding,
+                    Conversion::Tresholding => {
+                        render_hint.conversion = PureConversion::Tresholding;
+                        visible_settings.thresholding_level = true;
+                        debug!("Setting previous value, as it's tresholding");
+                        gamma_channel_tx
+                            .send(GammaControl::PreviousValue)
+                            .await
+                            .ok();
+                    }
                     Conversion::Dithering(dithering) => {
                         render_hint.conversion = PureConversion::Dithering;
 
@@ -427,6 +444,14 @@ pub async fn set_screen_settings(screen_settings: DriverMode) {
             dithering.set().await;
             visible_settings.dithering = true;
         }
+    }
+
+    if !visible_settings.thresholding_level {
+        debug!("Setting default gamma");
+        gamma_channel_tx
+            .send(GammaControl::Force(DEFAULT_GAMMA))
+            .await
+            .ok();
     }
     if render_hint != current_render_hint {
         debug!("Render hint changed! It's now: {:#?}", render_hint);

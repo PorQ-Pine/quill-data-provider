@@ -54,7 +54,8 @@ impl SocketHandler for CoolBacklightListener {
             let current_brightness = get_brightness(&path).await;
             if previous_brightness != current_brightness {
                 debug!("Sending cool brightness: {}", current_brightness);
-                let new_brightness = ((current_brightness.parse::<u16>().unwrap() * 100 / 255) as u8).to_string();
+                let new_brightness =
+                    ((current_brightness.parse::<u16>().unwrap() * 100 / 255) as u8).to_string();
                 self.send_unix(unix, new_brightness).await;
                 previous_brightness = current_brightness;
             } else {
@@ -99,7 +100,8 @@ impl SocketHandler for WarmBacklightListener {
             let current_brightness = get_brightness(&path).await;
             if previous_brightness != current_brightness {
                 debug!("Sending warm brightness: {}", current_brightness);
-                let new_brightness = ((current_brightness.parse::<u16>().unwrap() * 100 / 255) as u8).to_string();
+                let new_brightness =
+                    ((current_brightness.parse::<u16>().unwrap() * 100 / 255) as u8).to_string();
                 self.send_unix(unix, new_brightness).await;
                 previous_brightness = current_brightness;
             } else {

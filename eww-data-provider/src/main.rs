@@ -61,16 +61,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         vkeyboard.start().await;
     });
 
+    let (gamma_channel_tx, gamma_channel_rx) = tokio::sync::mpsc::channel(10);
+    let mut gamma = GammaListener {
+        channel_rx: tx.subscribe(),
+        child: None,
+        internal_channel_rx: gamma_channel_rx,
+        current_gamma: 0,
+    };
+    tokio::spawn(async move {
+        gamma.start().await;
+    });
+
     let mut eink = EinkListener {
         channel_rx: tx.subscribe(),
+        gamma_channel_tx: gamma_channel_tx,
     };
     tokio::spawn(async move {
         eink.start().await;
-    });
-
-    let mut gamma = GammaListener {channel_rx:tx.subscribe(),child:None, current_gamma: 0 };
-    tokio::spawn(async move {
-        gamma.start().await;
     });
 
     let mut settingsmenu = SettingsMenuListener {

@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use log::*;
+use serde::{Deserialize, Serialize};
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
     process::Command,
 };
-use serde::{Deserialize, Serialize};
 
 use crate::listener::SocketHandler;
 

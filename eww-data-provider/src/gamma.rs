@@ -84,6 +84,9 @@ impl GammaListener {
     }
 
     pub async fn toggle_gamma(&mut self, gamma_level: u8) {
+        // Not working yet ;/
+        return;
+        
         if self.current_gamma == gamma_level {
             return;
         }

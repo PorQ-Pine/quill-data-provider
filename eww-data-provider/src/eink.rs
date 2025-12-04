@@ -1,4 +1,4 @@
-use log::debug;
+use log::{debug, error};
 use std::str::FromStr;
 use tokio::process::Command;
 
@@ -46,8 +46,14 @@ pub enum Conversion {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Redraw {
-    FastDrawing,        // R
+    FastDrawing(u16),   // R
     DisableFastDrawing, // r
+}
+
+impl Redraw {
+    pub async fn apply_fast_drawing(value: u16) {
+        run_cmd(&format!("busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 RedrawDelay q {}", value)).await;
+    }
 }
 
 // enum ScreenOptions {
@@ -84,6 +90,7 @@ pub struct EwwScreenConfig {
     conv_tresholding: bool,
     conv_dithering: bool,
     redraw_fastdrawing: bool,
+    redraw_level_value: u16,
     redraw_disablefastdrawing: bool,
 }
 
@@ -97,6 +104,21 @@ fn parse_bool(state: &str, key: &str) -> bool {
             if k == key { Some(v == "true") } else { None }
         })
         .unwrap_or(false)
+}
+
+fn parse_u16(state: &str, key: &str) -> u16 {
+    state
+        .lines()
+        .find_map(|line| {
+            let mut parts = line.splitn(2, ':');
+            let k = parts.next()?.trim();
+            let v = parts.next()?.trim();
+            if k == key { v.parse::<u16>().ok() } else { None }
+        })
+        .unwrap_or_else(|| {
+            error!("Key '{}' not found, using default 50", key);
+            50
+        })
 }
 
 pub async fn get_eww_screen_config() -> EwwScreenConfig {
@@ -113,6 +135,7 @@ pub async fn get_eww_screen_config() -> EwwScreenConfig {
         conv_tresholding: parse_bool(state, "conversion_tresholding"),
         conv_dithering: parse_bool(state, "conversion_dithering"),
         redraw_fastdrawing: parse_bool(state, "redraw_fast_drawing"),
+        redraw_level_value: parse_u16(state, "redraw_level_value"),
         redraw_disablefastdrawing: parse_bool(state, "redraw_disabled"),
     }
 }
@@ -134,7 +157,7 @@ pub async fn eww_screen_config_to_enum(config: &EwwScreenConfig) -> DriverMode {
 
     fn get_redraw(config: &EwwScreenConfig) -> Redraw {
         if config.redraw_fastdrawing {
-            return Redraw::FastDrawing;
+            return Redraw::FastDrawing(config.redraw_level_value);
         }
         if config.redraw_disablefastdrawing {
             return Redraw::DisableFastDrawing;
@@ -194,23 +217,28 @@ pub enum PureConversion {
     Dithering,
 }
 
-// Impl string functions for render hint enums
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum PureRedraw {
+    FastDrawing,        // R
+    DisableFastDrawing, // r
+}
 
-impl ToString for Redraw {
+// Impl string functions for render hint enums
+impl ToString for PureRedraw {
     fn to_string(&self) -> String {
         match self {
-            Redraw::FastDrawing => "R".into(),
-            Redraw::DisableFastDrawing => "r".into(),
+            PureRedraw::FastDrawing => "R".into(),
+            PureRedraw::DisableFastDrawing => "r".into(),
         }
     }
 }
 
-impl FromStr for Redraw {
+impl FromStr for PureRedraw {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "R" => Ok(Redraw::FastDrawing),
-            "r" => Ok(Redraw::DisableFastDrawing),
+            "R" => Ok(PureRedraw::FastDrawing),
+            "r" => Ok(PureRedraw::DisableFastDrawing),
             _ => Err(()),
         }
     }
@@ -262,7 +290,7 @@ impl FromStr for PureConversion {
 pub struct RenderHint {
     pub bit_depth: PureBitDepth,
     pub conversion: PureConversion,
-    pub redraw: Redraw,
+    pub redraw: PureRedraw,
 }
 
 impl ToString for RenderHint {
@@ -288,7 +316,7 @@ impl FromStr for RenderHint {
 
         let bit_depth = bd.parse()?;
         let conversion = cv.parse().unwrap_or(PureConversion::Tresholding);
-        let redraw = rw.parse().unwrap_or(Redraw::DisableFastDrawing);
+        let redraw = rw.parse().unwrap_or(PureRedraw::FastDrawing);
 
         Ok(RenderHint {
             bit_depth,
@@ -323,6 +351,7 @@ pub struct VisibleSettings {
     pub conversion: bool,
     pub thresholding_level: bool,
     pub redraw: bool,
+    pub redraw_level: bool,
 }
 
 impl VisibleSettings {
@@ -343,8 +372,14 @@ impl VisibleSettings {
         if parse_bool(state, "redraw") != self.redraw {
             updates.push(format!("redraw={}", self.redraw));
         }
+        /*
+        // Doesn't work for now ;/
         if parse_bool(state, "thresholding_level") != self.thresholding_level {
             updates.push(format!("thresholding_level={}", self.redraw));
+        }
+        */
+        if parse_bool(state, "redraw_level") != self.redraw {
+            updates.push(format!("redraw_level={}", self.redraw));
         }
 
         if !updates.is_empty() {
@@ -435,8 +470,16 @@ pub async fn set_screen_settings(
             if let Some(redraw) = maybe_redraw {
                 visible_settings.redraw = true;
                 match redraw {
-                    Redraw::FastDrawing => render_hint.redraw = Redraw::FastDrawing,
-                    Redraw::DisableFastDrawing => render_hint.redraw = Redraw::DisableFastDrawing,
+                    Redraw::FastDrawing(mut delay_drawing) => {
+                        render_hint.redraw = PureRedraw::FastDrawing;
+
+                        // map to 10-300
+                        delay_drawing = ((delay_drawing - 1) as f32 / 99.0 * 290.0 + 10.0).round() as u16;
+                        Redraw::apply_fast_drawing(delay_drawing).await;
+                    }
+                    Redraw::DisableFastDrawing => {
+                        render_hint.redraw = PureRedraw::DisableFastDrawing
+                    }
                 }
             }
         }

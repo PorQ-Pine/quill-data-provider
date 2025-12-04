@@ -19,7 +19,7 @@ impl EinkListener {
         // Perfect defaults, middle ground between speed and look
         set_screen_settings(crate::eink::DriverMode::Normal(crate::eink::BitDepth::Y2(
             crate::eink::Conversion::Tresholding,
-            crate::eink::Redraw::FastDrawing,
+            crate::eink::Redraw::FastDrawing(25),
         )), &mut self.gamma_channel_tx)
         .await;
 

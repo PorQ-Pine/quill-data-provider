@@ -2,8 +2,6 @@ use log::{debug, error};
 use std::str::FromStr;
 use tokio::process::Command;
 
-use crate::gamma::{DEFAULT_GAMMA, GammaControl};
-
 // The mess of connected enums is so we know what affects when, so:
 // - We can set only what's needed
 // - We show only what can be changed
@@ -40,7 +38,7 @@ pub enum BitDepth {
 
 #[derive(Copy, Clone, Debug)]
 pub enum Conversion {
-    Tresholding,          // T
+    Tresholding(u8),      // T, + level
     Dithering(Dithering), // D
 }
 
@@ -88,6 +86,7 @@ pub struct EwwScreenConfig {
     bitdepth_y2: bool,
     bitdepth_y4: bool,
     conv_tresholding: bool,
+    thresholding_level_value: u8,
     conv_dithering: bool,
     redraw_fastdrawing: bool,
     redraw_level_value: u16,
@@ -106,18 +105,18 @@ fn parse_bool(state: &str, key: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn parse_u16(state: &str, key: &str) -> u16 {
+fn parse_number<T: std::str::FromStr + std::fmt::Debug>(state: &str, key: &str, default: T) -> T {
     state
         .lines()
         .find_map(|line| {
             let mut parts = line.splitn(2, ':');
             let k = parts.next()?.trim();
             let v = parts.next()?.trim();
-            if k == key { v.parse::<u16>().ok() } else { None }
+            if k == key { v.parse::<T>().ok() } else { None }
         })
         .unwrap_or_else(|| {
-            error!("Key '{}' not found, using default 50", key);
-            50
+            error!("Key '{}' not found, using default {:?}", key, default);
+            default
         })
 }
 
@@ -133,9 +132,10 @@ pub async fn get_eww_screen_config() -> EwwScreenConfig {
         bitdepth_y2: parse_bool(state, "bitdepth_y2"),
         bitdepth_y4: parse_bool(state, "bitdepth_y4"),
         conv_tresholding: parse_bool(state, "conversion_tresholding"),
+        thresholding_level_value: parse_number(state, "thresholding_level_value", 39),
         conv_dithering: parse_bool(state, "conversion_dithering"),
         redraw_fastdrawing: parse_bool(state, "redraw_fast_drawing"),
-        redraw_level_value: parse_u16(state, "redraw_level_value"),
+        redraw_level_value: parse_number(state, "redraw_level_value", 25),
         redraw_disablefastdrawing: parse_bool(state, "redraw_disabled"),
     }
 }
@@ -171,7 +171,7 @@ pub async fn eww_screen_config_to_enum(config: &EwwScreenConfig) -> DriverMode {
             return Conversion::Dithering(dithering);
         }
         if config.conv_tresholding {
-            return Conversion::Tresholding;
+            return Conversion::Tresholding(config.thresholding_level_value);
         }
         panic!("No conversion, what?");
     };
@@ -419,9 +419,36 @@ impl Dithering {
     }
 }
 
+pub const DEFAULT_TRESHOLDING_LEVEL: u8 = 39;
+impl Conversion {
+    async fn set_tresholding_level_internal(level: u8) {
+        if let Err(e) = tokio::fs::write(
+            "/sys/module/rockchip_ebc_blit_neon/parameters/y4_threshold_y1",
+            level.to_string(),
+        )
+        .await
+        {
+            error!("Failed to set threshold: {}", e);
+        }
+    }
+
+    pub async fn set_tresholding_level(level: u8, show_gui: bool) {
+        let converted = 2 + ((level.saturating_sub(1) as f32 / 99.0) * 13.0).round() as u8;
+        Self::set_tresholding_level_internal(converted).await;
+
+        if show_gui {
+            run_cmd(&format!(
+                "eww --no-daemonize update thresholding_level_value_real={}",
+                converted
+            ))
+            .await;
+        }
+    }
+}
+
 pub async fn set_screen_settings(
     screen_settings: DriverMode,
-    gamma_channel_tx: &mut tokio::sync::mpsc::Sender<GammaControl>,
+    // gamma_channel_tx: &mut tokio::sync::mpsc::Sender<GammaControl>,
 ) {
     let current_render_hint = RenderHint::get_render_hint().await;
     let mut render_hint = current_render_hint;
@@ -436,6 +463,7 @@ pub async fn set_screen_settings(
                 BitDepth::Y1(conversion) => {
                     maybe_conversion = Some(conversion);
                     render_hint.bit_depth = PureBitDepth::Y1;
+                    render_hint.redraw = PureRedraw::DisableFastDrawing // Doesn't make sense
                 }
                 BitDepth::Y2(conversion, redraw) => {
                     maybe_conversion = Some(conversion);
@@ -451,14 +479,18 @@ pub async fn set_screen_settings(
             if let Some(conversion) = maybe_conversion {
                 visible_settings.conversion = true;
                 match conversion {
-                    Conversion::Tresholding => {
+                    Conversion::Tresholding(tresholding_level) => {
                         render_hint.conversion = PureConversion::Tresholding;
                         visible_settings.thresholding_level = true;
-                        debug!("Setting previous value, as it's tresholding");
+                        debug!("Setting tresholding value");
+                        Conversion::set_tresholding_level(tresholding_level, true).await;
+                        // TODO: tresholding only visible in Y1
+                        /*
                         gamma_channel_tx
                             .send(GammaControl::PreviousValue)
                             .await
                             .ok();
+                        */
                     }
                     Conversion::Dithering(dithering) => {
                         render_hint.conversion = PureConversion::Dithering;
@@ -476,7 +508,8 @@ pub async fn set_screen_settings(
 
                         visible_settings.redraw_level = true;
                         // map to 10-300
-                        delay_drawing = ((delay_drawing - 1) as f32 / 99.0 * 290.0 + 10.0).round() as u16;
+                        delay_drawing =
+                            ((delay_drawing - 1) as f32 / 99.0 * 290.0 + 10.0).round() as u16;
                         Redraw::apply_fast_drawing(delay_drawing).await;
                     }
                     Redraw::DisableFastDrawing => {
@@ -492,11 +525,15 @@ pub async fn set_screen_settings(
     }
 
     if !visible_settings.thresholding_level {
-        debug!("Setting default gamma");
+        debug!("Setting default treshold level");
+        Conversion::set_tresholding_level(DEFAULT_TRESHOLDING_LEVEL, false).await;
+
+        /*
         gamma_channel_tx
             .send(GammaControl::Force(DEFAULT_GAMMA))
             .await
             .ok();
+         */
     }
     if render_hint != current_render_hint {
         debug!("Render hint changed! It's now: {:#?}", render_hint);
@@ -504,5 +541,5 @@ pub async fn set_screen_settings(
     }
 
     visible_settings.set().await;
-    refresh_screen().await;
+    // refresh_screen().await;
 }

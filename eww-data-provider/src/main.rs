@@ -4,7 +4,7 @@ pub mod bluetooth;
 pub mod dunst;
 pub mod eink;
 pub mod eink_listener;
-pub mod gamma;
+// pub mod gamma;
 pub mod listener;
 pub mod network;
 pub mod player;
@@ -27,7 +27,6 @@ use volume::VolumeListener;
 
 use crate::dunst::DunstListener;
 use crate::eink_listener::EinkListener;
-use crate::gamma::GammaListener;
 use crate::settingsmenu::SettingsMenuListener;
 use crate::virtualkeyboard::VirtualKeyboardListener;
 
@@ -61,6 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         vkeyboard.start().await;
     });
 
+    /*
     let (gamma_channel_tx, gamma_channel_rx) = tokio::sync::mpsc::channel(10);
     let mut gamma = GammaListener {
         channel_rx: tx.subscribe(),
@@ -71,10 +71,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         gamma.start().await;
     });
+    */
 
     let mut eink = EinkListener {
         channel_rx: tx.subscribe(),
-        gamma_channel_tx: gamma_channel_tx,
+        // gamma_channel_tx: gamma_channel_tx,
     };
     tokio::spawn(async move {
         eink.start().await;

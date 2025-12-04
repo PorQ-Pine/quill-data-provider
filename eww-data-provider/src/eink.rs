@@ -378,12 +378,13 @@ impl VisibleSettings {
             updates.push(format!("thresholding_level={}", self.redraw));
         }
         */
-        if parse_bool(state, "redraw_level") != self.redraw {
-            updates.push(format!("redraw_level={}", self.redraw));
+        if parse_bool(state, "redraw_level") != self.redraw_level {
+            updates.push(format!("redraw_level={}", self.redraw_level));
         }
 
         if !updates.is_empty() {
             let cmd = format!("eww --no-daemonize update {}", updates.join(" "));
+            debug!("Running eww update cmd: {}", cmd);
             run_cmd(&cmd).await;
         }
     }
@@ -473,6 +474,7 @@ pub async fn set_screen_settings(
                     Redraw::FastDrawing(mut delay_drawing) => {
                         render_hint.redraw = PureRedraw::FastDrawing;
 
+                        visible_settings.redraw_level = true;
                         // map to 10-300
                         delay_drawing = ((delay_drawing - 1) as f32 / 99.0 * 290.0 + 10.0).round() as u16;
                         Redraw::apply_fast_drawing(delay_drawing).await;

@@ -4,7 +4,7 @@ use std::time::Duration;
 use tokio::time::sleep;
 
 use crate::eink::{
-    eww_screen_config_to_enum, get_eww_screen_config, refresh_screen, set_screen_settings, DEFAULT_TRESHOLDING_LEVEL,
+    eww_screen_config_to_enum, get_eww_screen_config, refresh_screen, run_cmd, set_screen_settings, DEFAULT_TRESHOLDING_LEVEL
 };
 
 pub struct EinkListener {
@@ -23,17 +23,20 @@ impl EinkListener {
                 crate::eink::Redraw::FastDrawing(25),
             )),
             // &mut self.gamma_channel_tx,
+                &run_cmd("eww --no-daemonize state").await,
         )
         .await;
 
         async fn screen_settings_call(_quick: bool) {
-            debug!("Got screen settings");
-            let screen_settings = get_eww_screen_config().await;
+            debug!("Got screen settings call");
+            let state = &run_cmd("eww --no-daemonize state").await;
+            let screen_settings = get_eww_screen_config(state).await;
             debug!("Screen settings: {:?}", screen_settings);
             let enum_screen_settings = eww_screen_config_to_enum(&screen_settings).await;
             debug!("Enum screen settings: {:#?}", enum_screen_settings);
             set_screen_settings(
                 enum_screen_settings,
+                state
                 // &mut self.gamma_channel_tx
                 // quick
             )

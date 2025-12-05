@@ -60,7 +60,7 @@ impl Redraw {
 // ScreenMode(DriverMode),
 // }
 
-async fn run_cmd(line: &str) -> String {
+pub async fn run_cmd(line: &str) -> String {
     let parts: Vec<&str> = line.split_whitespace().collect();
     debug!("Running run_cmd as: {} {:?}", parts[0], &parts[1..]);
     let out = Command::new(parts[0])
@@ -94,7 +94,7 @@ pub struct EwwScreenConfig {
 }
 
 fn parse_bool(state: &str, key: &str) -> bool {
-    state
+    let res = state
         .lines()
         .find_map(|line| {
             let mut parts = line.splitn(2, ':');
@@ -102,7 +102,10 @@ fn parse_bool(state: &str, key: &str) -> bool {
             let v = parts.next()?.trim();
             if k == key { Some(v == "true") } else { None }
         })
-        .unwrap_or(false)
+        .unwrap_or(false);
+
+    debug!("For key {} the bool is: {}", key, res);
+    res
 }
 
 fn parse_number<T: std::str::FromStr + std::fmt::Debug>(state: &str, key: &str, default: T) -> T {
@@ -120,8 +123,7 @@ fn parse_number<T: std::str::FromStr + std::fmt::Debug>(state: &str, key: &str, 
         })
 }
 
-pub async fn get_eww_screen_config() -> EwwScreenConfig {
-    let state = &run_cmd("eww --no-daemonize state").await;
+pub async fn get_eww_screen_config(state: &str) -> EwwScreenConfig {
     EwwScreenConfig {
         dithering_bayer: parse_bool(state, "dithering_bayer"),
         dithering_blue_noise16: parse_bool(state, "dithering_bluenoise16"),
@@ -355,11 +357,10 @@ pub struct VisibleSettings {
 }
 
 impl VisibleSettings {
-    pub async fn set(&self) {
-        let state = &run_cmd("eww --no-daemonize state").await;
-
+    pub async fn set(&self, state: &str) {
         let mut updates = Vec::new();
 
+        // debug!("State is: \n{}", state);
         if parse_bool(state, "dithering") != self.dithering {
             updates.push(format!("dithering={}", self.dithering));
         }
@@ -372,12 +373,10 @@ impl VisibleSettings {
         if parse_bool(state, "redraw") != self.redraw {
             updates.push(format!("redraw={}", self.redraw));
         }
-        /*
-        // Doesn't work for now ;/
+        // debug!("self.thresholding_level: {}", self.thresholding_level);
         if parse_bool(state, "thresholding_level") != self.thresholding_level {
-            updates.push(format!("thresholding_level={}", self.redraw));
+            updates.push(format!("thresholding_level={}", self.thresholding_level));
         }
-        */
         if parse_bool(state, "redraw_level") != self.redraw_level {
             updates.push(format!("redraw_level={}", self.redraw_level));
         }
@@ -448,6 +447,7 @@ impl Conversion {
 
 pub async fn set_screen_settings(
     screen_settings: DriverMode,
+    state: &str
     // gamma_channel_tx: &mut tokio::sync::mpsc::Sender<GammaControl>,
 ) {
     let current_render_hint = RenderHint::get_render_hint().await;
@@ -481,10 +481,15 @@ pub async fn set_screen_settings(
                 match conversion {
                     Conversion::Tresholding(tresholding_level) => {
                         render_hint.conversion = PureConversion::Tresholding;
-                        visible_settings.thresholding_level = true;
-                        debug!("Setting tresholding value");
-                        Conversion::set_tresholding_level(tresholding_level, true).await;
-                        // TODO: tresholding only visible in Y1
+                        // Only in Y1
+                        match bit_depth {
+                            BitDepth::Y1(_conversion) => {
+                                visible_settings.thresholding_level = true;
+                                debug!("Setting tresholding value");
+                                Conversion::set_tresholding_level(tresholding_level, true).await;
+                            }
+                            _ => {}
+                        }
                         /*
                         gamma_channel_tx
                             .send(GammaControl::PreviousValue)
@@ -540,6 +545,7 @@ pub async fn set_screen_settings(
         render_hint.set().await;
     }
 
-    visible_settings.set().await;
+    visible_settings.set(state).await;
     // refresh_screen().await;
+    debug!("Set screen settings finished!");
 }

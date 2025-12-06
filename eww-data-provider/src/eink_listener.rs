@@ -20,7 +20,7 @@ impl EinkListener {
         set_screen_settings(
             crate::eink::DriverMode::Normal(crate::eink::BitDepth::Y2(
                 crate::eink::Conversion::Tresholding(DEFAULT_TRESHOLDING_LEVEL),
-                crate::eink::Redraw::FastDrawing(25),
+                crate::eink::Redraw::DisableFastDrawing,
             )),
             // &mut self.gamma_channel_tx,
                 &run_cmd("eww --no-daemonize state").await,

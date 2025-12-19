@@ -12,7 +12,6 @@ fn help() {
     eprintln!("Commands:");
     eprintln!("  listen <socket_name> - Listen on a Unix socket and print incoming lines.");
     eprintln!("  send <request_type>  - Send a request enum to the data provider.");
-    eprintln!("Available request types: notifications");
     std::process::exit(1);
 }
 

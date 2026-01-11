@@ -12,11 +12,25 @@ use crate::listener::SocketHandler;
 struct NetworkInfo {
     essid: String,
     signal: String,
+    enabled: bool,
 }
 
 async fn get_network_info() -> String {
     let mut essid = String::new();
     let mut signal = String::new();
+    let mut enabled = false;
+
+    let nmcli_radio_output = Command::new("nmcli")
+        .arg("radio")
+        .arg("wifi")
+        .output()
+        .await
+        .expect("Failed to execute nmcli radio wifi");
+    
+    let nmcli_radio_stdout = String::from_utf8_lossy(&nmcli_radio_output.stdout);
+    if nmcli_radio_stdout.contains("enabled") {
+        enabled = true;
+    }
 
     let nmcli_wifi_output = Command::new("nmcli")
         .arg("-f")
@@ -51,10 +65,10 @@ async fn get_network_info() -> String {
         essid = line.trim().trim_matches('"').to_string();
     }
 
-    let network_info = NetworkInfo { essid, signal };
+    let network_info = NetworkInfo { essid, signal, enabled };
     serde_json::to_string(&network_info).unwrap_or_else(|e| {
         error!("Failed to serialize network info: {}", e);
-        "{\"essid\": \"\", \"signal\": \"\"}".to_string()
+        "{\"essid\": \"\", \"signal\": \"\", \"enabled\": false}".to_string()
     })
 }
 

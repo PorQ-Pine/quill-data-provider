@@ -1,5 +1,5 @@
 [package]
-name = "eww-data-provider"
+name = "quill-data-provider"
 version = "0.1.0"
 edition = "2024"
 
@@ -13,3 +13,4 @@ async-trait = "0.1.73"
 enums = { path = "../enums" }
 postcard = { version = "1.1.3", features = ["postcard-derive", "alloc"] }
 anyhow = "1.0.100"
+data-provider-lib = { path = "../data-provider-lib" }

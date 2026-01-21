@@ -1,10 +1,11 @@
+use data_provider_lib::{BitDepth, Conversion, DEFAULT_TRESHOLDING_LEVEL, DriverMode, Redraw, run_cmd};
 use enums::Requests;
 use log::{debug, error, info};
 use std::time::Duration;
 use tokio::time::sleep;
 
 use crate::eink::{
-    eww_screen_config_to_enum, get_eww_screen_config, refresh_screen, run_cmd, set_screen_settings, DEFAULT_TRESHOLDING_LEVEL
+    eww_screen_config_to_enum, get_eww_screen_config, refresh_screen, set_screen_settings
 };
 
 pub struct EinkListener {
@@ -18,9 +19,9 @@ impl EinkListener {
         debug!("Setting initial settings");
         // Perfect defaults, middle ground between speed and look
         set_screen_settings(
-            crate::eink::DriverMode::Normal(crate::eink::BitDepth::Y2(
-                crate::eink::Conversion::Tresholding(DEFAULT_TRESHOLDING_LEVEL),
-                crate::eink::Redraw::DisableFastDrawing,
+            DriverMode::Normal(BitDepth::Y2(
+                Conversion::Tresholding(DEFAULT_TRESHOLDING_LEVEL),
+                Redraw::DisableFastDrawing,
             )),
             // &mut self.gamma_channel_tx,
                 &run_cmd("eww --no-daemonize state").await,

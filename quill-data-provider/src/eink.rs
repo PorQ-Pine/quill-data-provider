@@ -1,75 +1,12 @@
+use data_provider_lib::{BitDepth, Conversion, DEFAULT_TRESHOLDING_LEVEL, Dithering, DriverMode, Redraw, run_cmd};
 use log::{debug, error};
 use std::str::FromStr;
-use tokio::process::Command;
-
-// The mess of connected enums is so we know what affects when, so:
-// - We can set only what's needed
-// - We show only what can be changed
-
-// Only matters when:
-// DriverMode is Fast
-// Normal, Y2 and Y1
-// busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 DitherMode y 0
-#[derive(Copy, Clone, Debug)]
-pub enum Dithering {
-    Bayer,       // 0
-    BlueNoise16, // 1
-    BlueNoise32, // 2
-}
-
-// busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 DriverMode y 0
-#[derive(Copy, Clone, Debug)]
-pub enum DriverMode {
-    Normal(BitDepth), //0
-    Fast(Dithering),  // 1
-                      // Doesn't work for me
-                      // Zero, // 8
-}
-
-// RenderHints
-// Only matters in Normal mode
-// busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 DefaultHintHr s "Y1|T|R"
-#[derive(Copy, Clone, Debug)]
-pub enum BitDepth {
-    Y1(Conversion),
-    Y2(Conversion, Redraw),
-    Y4(Redraw),
-}
-
-#[derive(Copy, Clone, Debug)]
-pub enum Conversion {
-    Tresholding(u8),      // T, + level
-    Dithering(Dithering), // D
-}
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Redraw {
-    FastDrawing(u16),   // R
-    DisableFastDrawing, // r
-}
-
-impl Redraw {
-    pub async fn apply_fast_drawing(value: u16) {
-        run_cmd(&format!("busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 RedrawDelay q {}", value)).await;
-    }
-}
 
 // enum ScreenOptions {
 // busctl --user call org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 GlobalRefresh
 // FullRefresh,
 // ScreenMode(DriverMode),
 // }
-
-pub async fn run_cmd(line: &str) -> String {
-    let parts: Vec<&str> = line.split_whitespace().collect();
-    debug!("Running run_cmd as: {} {:?}", parts[0], &parts[1..]);
-    let out = Command::new(parts[0])
-        .args(&parts[1..])
-        .output()
-        .await
-        .unwrap();
-    String::from_utf8_lossy(&out.stdout).into_owned()
-}
 
 pub async fn refresh_screen() {
     run_cmd("busctl --user call org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 GlobalRefresh").await;
@@ -385,62 +322,6 @@ impl VisibleSettings {
             let cmd = format!("eww --no-daemonize update {}", updates.join(" "));
             debug!("Running eww update cmd: {}", cmd);
             run_cmd(&cmd).await;
-        }
-    }
-}
-
-impl DriverMode {
-    pub async fn set(&self) {
-        let string = match self {
-            DriverMode::Normal(_bit_depth) => "0",
-            DriverMode::Fast(_dithering) => "1",
-        };
-        let line = format!(
-            "busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 DriverMode y {}",
-            string
-        );
-        run_cmd(&line).await;
-    }
-}
-
-impl Dithering {
-    pub async fn set(&self) {
-        let string = match self {
-            Dithering::Bayer => "0",
-            Dithering::BlueNoise16 => "1",
-            Dithering::BlueNoise32 => "2",
-        };
-        let line = format!(
-            "busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 DitherMode y {}",
-            string
-        );
-        run_cmd(&line).await;
-    }
-}
-
-pub const DEFAULT_TRESHOLDING_LEVEL: u8 = 39;
-impl Conversion {
-    async fn set_tresholding_level_internal(level: u8) {
-        if let Err(e) = tokio::fs::write(
-            "/sys/module/rockchip_ebc_blit_neon/parameters/y4_threshold_y1",
-            level.to_string(),
-        )
-        .await
-        {
-            error!("Failed to set threshold: {}", e);
-        }
-    }
-
-    pub async fn set_tresholding_level(level: u8, show_gui: bool) {
-        let converted = 2 + ((level.saturating_sub(1) as f32 / 99.0) * 13.0).round() as u8;
-        Self::set_tresholding_level_internal(converted).await;
-
-        if show_gui {
-            run_cmd(&format!(
-                "eww --no-daemonize update thresholding_level_value_real={}",
-                converted
-            ))
-            .await;
         }
     }
 }

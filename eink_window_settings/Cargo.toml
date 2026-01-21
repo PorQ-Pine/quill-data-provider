@@ -1,0 +1,12 @@
+[package]
+name = "eink_window_settings"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+eframe = { version ="0.33.3", features = ["default"] }
+egui_extras = { version = "0.33.3", features = ["default", "image"] }
+log = "0.4.20"
+env_logger = "0.11.8"
+data-provider-lib = { path = "../data-provider-lib" }
+enum2egui = "0.33.0"

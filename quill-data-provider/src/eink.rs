@@ -1,4 +1,4 @@
-use data_provider_lib::{BitDepth, Conversion, DEFAULT_TRESHOLDING_LEVEL, Dithering, DriverMode, Redraw, run_cmd};
+use quill_data_provider_lib::{BitDepth, Conversion, DEFAULT_TRESHOLDING_LEVEL, Dithering, DriverMode, Redraw, run_cmd};
 use log::{debug, error};
 use std::str::FromStr;
 

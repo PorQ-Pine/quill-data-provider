@@ -788,18 +788,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f27ae1dd37df86211c42e150270f82743308803d90a6f6e6651cd730d5e1732f"
 
 [[package]]
-name = "data-provider-lib"
-version = "0.1.0"
-dependencies = [
- "eframe",
- "enum2egui",
- "enum2str",
- "log",
- "serde",
- "tokio",
-]
-
-[[package]]
 name = "dispatch"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -997,12 +985,12 @@ dependencies = [
 name = "eink_window_settings"
 version = "0.1.0"
 dependencies = [
- "data-provider-lib",
  "eframe",
  "egui_extras",
  "enum2egui",
  "env_logger",
  "log",
+ "quill-data-provider-lib",
  "ron",
  "serde",
 ]
@@ -2600,6 +2588,18 @@ checksum = "b66c2058c55a409d601666cffe35f04333cf1013010882cec174a7467cd4e21c"
 dependencies = [
  "memchr",
  "serde",
+]
+
+[[package]]
+name = "quill-data-provider-lib"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "enum2egui",
+ "enum2str",
+ "log",
+ "serde",
+ "tokio",
 ]
 
 [[package]]

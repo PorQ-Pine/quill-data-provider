@@ -1,4 +1,4 @@
-use data_provider_lib::{BitDepth, Conversion, DEFAULT_TRESHOLDING_LEVEL, DriverMode, Redraw, run_cmd};
+use quill_data_provider_lib::{BitDepth, Conversion, DEFAULT_TRESHOLDING_LEVEL, DriverMode, Redraw, run_cmd};
 use enums::Requests;
 use log::{debug, error, info};
 use std::time::Duration;

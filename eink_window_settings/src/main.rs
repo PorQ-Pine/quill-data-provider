@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use data_provider_lib::DriverMode;
+use quill_data_provider_lib::DriverMode;
 use eframe::egui;
 use enum2egui::{Gui, GuiInspect};
 use serde::{Deserialize, Serialize};

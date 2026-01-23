@@ -8,7 +8,7 @@ eframe = { version ="0.33.3", features = ["default"] }
 egui_extras = { version = "0.33.3", features = ["default", "image"] }
 log = "0.4.20"
 env_logger = "0.11.8"
-data-provider-lib = { path = "../data-provider-lib" }
+quill-data-provider-lib = { path = "../quill-data-provider-lib" }
 enum2egui = "0.33.0"
 ron = "0.12.0"
 serde = { version = "1.0", features = ["derive"] }

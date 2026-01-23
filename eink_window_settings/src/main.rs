@@ -19,9 +19,9 @@ fn load_settings() -> Result<Vec<EinkWindowSetting>, Box<dyn std::error::Error>>
 }
 
 fn save_settings(settings: &Vec<EinkWindowSetting>) -> Result<(), Box<dyn std::error::Error>> {
-    for set in settings {
+    for (i, set) in settings.iter().enumerate() {
         if set.app_id.is_empty() {
-            return Err("custom error".into());
+            return Err(format!("Id at index {} is empty", i).into());
         }
     }
     let home = std::env::var("HOME")?;
@@ -53,7 +53,7 @@ fn main() -> eframe::Result {
                     let mut line_mut = line.to_string().clone();
                     line_mut = line_mut.replace("App ID: \"", "");
                     line_mut.pop();
-                    if line_mut.contains("App ID: (unset") {
+                    if line_mut.contains("App ID: (unset") || windows.contains(&line_mut) {
                         continue;
                     }
                     windows.push(line_mut);

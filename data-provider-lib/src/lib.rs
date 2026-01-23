@@ -1,6 +1,7 @@
 use eframe::egui;
 use enum2egui::{Gui, GuiInspect};
 use log::{debug, error};
+use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
 // The mess of connected enums is so we know what affects when, so:
@@ -11,7 +12,7 @@ use tokio::process::Command;
 // DriverMode is Fast
 // Normal, Y2 and Y1
 // busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 DitherMode y 0
-#[derive(Copy, Clone, Debug, PartialEq, Gui, Default)]
+#[derive(Copy, Clone, Debug, PartialEq, Gui, Default, Serialize, Deserialize)]
 pub enum Dithering {
     #[default]
     Bayer, // 0
@@ -26,7 +27,7 @@ impl std::fmt::Display for Dithering {
 }
 
 // busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 DriverMode y 0
-#[derive(Copy, Clone, Debug, PartialEq, Gui)]
+#[derive(Copy, Clone, Debug, PartialEq, Gui, Serialize, Deserialize)]
 pub enum DriverMode {
     Normal(#[enum2egui(label = "Bit depth")] BitDepth), // 0
     Fast(#[enum2egui(label = "Dithering type")] Dithering), // 1
@@ -52,7 +53,7 @@ impl Default for DriverMode {
 // RenderHints
 // Only matters in Normal mode
 // busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 DefaultHintHr s "Y1|T|R"
-#[derive(Copy, Clone, Debug, PartialEq, Gui)]
+#[derive(Copy, Clone, Debug, PartialEq, Gui, Serialize, Deserialize)]
 pub enum BitDepth {
     Y1(#[enum2egui(label = "Conversion")] Conversion),
     Y2(#[enum2egui(label = "Conversion")] Conversion, #[enum2egui(label = "Fast redraw")] Redraw),
@@ -71,7 +72,7 @@ impl std::fmt::Display for BitDepth {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Gui)]
+#[derive(Copy, Clone, Debug, PartialEq, Gui, Serialize, Deserialize)]
 pub enum Conversion {
     Tresholding(#[enum2egui(label = "Treshold level")] TresholdLevel), // T, + level
     Dithering(#[enum2egui(label = "Dithering type")] Dithering),       // D
@@ -91,7 +92,7 @@ impl std::fmt::Display for Conversion {
 
 // So the configurator works well...
 #[repr(u8)]
-#[derive(Copy, Clone, Debug, PartialEq, Gui, Default)]
+#[derive(Copy, Clone, Debug, PartialEq, Gui, Default, Serialize, Deserialize)]
 pub enum TresholdLevel {
     _2,
     _3,
@@ -116,14 +117,14 @@ impl std::fmt::Display for TresholdLevel {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Gui, Default)]
+#[derive(Copy, Clone, Debug, PartialEq, Gui, Default, Serialize, Deserialize)]
 pub enum Redraw {
     FastDrawing(#[enum2egui(label = "")] RedrawOptions), // R
     #[default]
     DisableFastDrawing, // r
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Gui)]
+#[derive(Copy, Clone, Debug, PartialEq, Gui, Serialize, Deserialize)]
 pub struct RedrawOptions {
     #[enum2egui(label = "\nRedraw delay (10-300 is reasonable)")]
     delay: u16,

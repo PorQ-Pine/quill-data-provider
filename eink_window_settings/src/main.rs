@@ -121,6 +121,11 @@ impl eframe::App for MyApp {
                 .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
                 .show(ui, |ui| {
                     ui.heading("Eink window settings");
+                    ui.label("Values which are global, but will be set for the currently focused window (or defaults if not apply, for the focused window):
+- Treshold level
+- Dithering type
+- Redraw delay
+- Fast mode");
                     self.settings.ui_mut(ui);
                 });
         });

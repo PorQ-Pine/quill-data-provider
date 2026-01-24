@@ -7,7 +7,7 @@ use std::{
 
 use eframe::egui;
 use enum2egui::GuiInspect;
-use quill_data_provider_lib::{load_settings, EinkWindowSetting};
+use quill_data_provider_lib::{EinkWindowSetting, load_settings};
 
 fn save_settings(settings: &Vec<EinkWindowSetting>) -> Result<(), Box<dyn std::error::Error>> {
     for (i, set) in settings.iter().enumerate() {
@@ -109,16 +109,20 @@ impl eframe::App for MyApp {
             });
         });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Eink window settings");
-            self.settings.ui_mut(ui);
-        });
-
         egui::SidePanel::right("right_panel").show(ctx, |ui| {
             if let Ok(windows) = self.windows_rx.try_recv() {
                 self.windows = windows;
             }
             ui.label(format!("Current window ID's:\n{}", self.windows.join("\n")));
+        });
+
+        egui::CentralPanel::default().show(ctx, |ui| {
+            egui::ScrollArea::vertical()
+                .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
+                .show(ui, |ui| {
+                    ui.heading("Eink window settings");
+                    self.settings.ui_mut(ui);
+                });
         });
 
         if let Some(err) = self.error.take() {

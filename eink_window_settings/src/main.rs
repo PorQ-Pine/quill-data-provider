@@ -5,18 +5,9 @@ use std::{
     time::Duration,
 };
 
-use quill_data_provider_lib::DriverMode;
 use eframe::egui;
-use enum2egui::{Gui, GuiInspect};
-use serde::{Deserialize, Serialize};
-
-fn load_settings() -> Result<Vec<EinkWindowSetting>, Box<dyn std::error::Error>> {
-    let home = std::env::var("HOME")?;
-    let path = format!("{}/.config/eink_window_settings/config.ron", home);
-    let contents = std::fs::read_to_string(path)?;
-    let settings: Vec<EinkWindowSetting> = ron::from_str(&contents)?;
-    Ok(settings)
-}
+use enum2egui::GuiInspect;
+use quill_data_provider_lib::{load_settings, EinkWindowSetting};
 
 fn save_settings(settings: &Vec<EinkWindowSetting>) -> Result<(), Box<dyn std::error::Error>> {
     for (i, set) in settings.iter().enumerate() {
@@ -83,12 +74,6 @@ fn main() -> eframe::Result {
         options,
         Box::new(|_cc| Ok(Box::new(app))),
     )
-}
-
-#[derive(Clone, Debug, PartialEq, Gui, Default, Serialize, Deserialize)]
-struct EinkWindowSetting {
-    app_id: String,
-    settings: DriverMode,
 }
 
 struct MyApp {

@@ -214,3 +214,17 @@ pub async fn run_cmd(line: &str) -> String {
         .unwrap();
     String::from_utf8_lossy(&out.stdout).into_owned()
 }
+
+#[derive(Clone, Debug, PartialEq, Gui, Default, Serialize, Deserialize)]
+pub struct EinkWindowSetting {
+    pub app_id: String,
+    pub settings: DriverMode,
+}
+
+pub fn load_settings() -> Result<Vec<EinkWindowSetting>, Box<dyn std::error::Error>> {
+    let home = std::env::var("HOME")?;
+    let path = format!("{}/.config/eink_window_settings/config.ron", home);
+    let contents = std::fs::read_to_string(path)?;
+    let settings: Vec<EinkWindowSetting> = ron::from_str(&contents)?;
+    Ok(settings)
+}

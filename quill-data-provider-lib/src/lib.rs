@@ -56,7 +56,10 @@ impl Default for DriverMode {
 #[derive(Copy, Clone, Debug, PartialEq, Gui, Serialize, Deserialize)]
 pub enum BitDepth {
     Y1(#[enum2egui(label = "Conversion")] Conversion),
-    Y2(#[enum2egui(label = "Conversion")] Conversion, #[enum2egui(label = "Fast redraw")] Redraw),
+    Y2(
+        #[enum2egui(label = "Conversion")] Conversion,
+        #[enum2egui(label = "Fast redraw")] Redraw,
+    ),
     Y4(#[enum2egui(label = "Fast redraw")] Redraw),
 }
 
@@ -111,6 +114,56 @@ pub enum TresholdLevel {
     _15,
 }
 
+impl TresholdLevel {
+    pub async fn set(&self) {
+        /*
+        if level < 2 || level > 15 {
+            error!("Wrong treshold level");
+        }
+        */
+        let level: u8 = match self {
+            TresholdLevel::_2 => 2,
+            TresholdLevel::_3 => 3,
+            TresholdLevel::_4 => 4,
+            TresholdLevel::_5 => 5,
+            TresholdLevel::_6 => 6,
+            TresholdLevel::_7 => 7,
+            TresholdLevel::_8 => 8,
+            TresholdLevel::_9 => 9,
+            TresholdLevel::_10 => 10,
+            TresholdLevel::_11 => 11,
+            TresholdLevel::_12 => 12,
+            TresholdLevel::_13 => 13,
+            TresholdLevel::_14 => 14,
+            TresholdLevel::_15 => 15,
+        };
+
+        if let Err(e) = tokio::fs::write(
+            "/sys/module/rockchip_ebc_blit_neon/parameters/y4_threshold_y1",
+            level.to_string(),
+        )
+        .await
+        {
+            error!("Failed to set threshold: {}", e);
+        }
+    }
+
+    /*
+    pub async fn set_tresholding_level(level: u8, show_gui: bool) {
+        let converted = 2 + ((level.saturating_sub(1) as f32 / 99.0) * 13.0).round() as u8;
+        Self::set_tresholding_level_internal(converted).await;
+
+        if show_gui {
+            run_cmd(&format!(
+                "eww --no-daemonize update thresholding_level_value_real={}",
+                converted
+            ))
+            .await;
+        }
+    }
+    */
+}
+
 impl std::fmt::Display for TresholdLevel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
@@ -121,13 +174,19 @@ impl std::fmt::Display for TresholdLevel {
 pub enum Redraw {
     FastDrawing(#[enum2egui(label = "")] RedrawOptions), // R
     #[default]
-    DisableFastDrawing, // r
+    DisableFastDrawing,                    // r
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Gui, Serialize, Deserialize)]
 pub struct RedrawOptions {
     #[enum2egui(label = "\nRedraw delay (10-300 is reasonable)")]
     delay: u16,
+}
+
+impl RedrawOptions {
+    pub async fn set(&self) {
+        run_cmd(&format!("busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 RedrawDelay q {}", self.delay)).await;
+    }
 }
 
 impl Default for RedrawOptions {
@@ -169,38 +228,6 @@ impl Dithering {
             string
         );
         run_cmd(&line).await;
-    }
-}
-
-impl Conversion {
-    async fn set_tresholding_level_internal(level: u8) {
-        if let Err(e) = tokio::fs::write(
-            "/sys/module/rockchip_ebc_blit_neon/parameters/y4_threshold_y1",
-            level.to_string(),
-        )
-        .await
-        {
-            error!("Failed to set threshold: {}", e);
-        }
-    }
-
-    pub async fn set_tresholding_level(level: u8, show_gui: bool) {
-        let converted = 2 + ((level.saturating_sub(1) as f32 / 99.0) * 13.0).round() as u8;
-        Self::set_tresholding_level_internal(converted).await;
-
-        if show_gui {
-            run_cmd(&format!(
-                "eww --no-daemonize update thresholding_level_value_real={}",
-                converted
-            ))
-            .await;
-        }
-    }
-}
-
-impl Redraw {
-    pub async fn apply_fast_drawing(value: u16) {
-        run_cmd(&format!("busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 RedrawDelay q {}", value)).await;
     }
 }
 

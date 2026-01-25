@@ -44,7 +44,7 @@ impl std::fmt::Display for DriverMode {
 impl Default for DriverMode {
     fn default() -> Self {
         DriverMode::Normal(BitDepth::Y2(
-            Conversion::Tresholding(TresholdLevel::default()),
+            Conversion::Tresholding,
             Redraw::DisableFastDrawing,
         ))
     }
@@ -55,7 +55,7 @@ impl Default for DriverMode {
 // busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 DefaultHintHr s "Y1|T|R"
 #[derive(Copy, Clone, Debug, PartialEq, Gui, Serialize, Deserialize)]
 pub enum BitDepth {
-    Y1(#[enum2egui(label = "Conversion")] Conversion),
+    Y1(#[enum2egui(label = "Conversion")] Conversion, TresholdLevel),
     Y2(
         #[enum2egui(label = "Conversion")] Conversion,
         #[enum2egui(label = "Fast redraw")] Redraw,
@@ -77,13 +77,13 @@ impl std::fmt::Display for BitDepth {
 
 #[derive(Copy, Clone, Debug, PartialEq, Gui, Serialize, Deserialize)]
 pub enum Conversion {
-    Tresholding(#[enum2egui(label = "Treshold level")] TresholdLevel), // T, + level
+    Tresholding, // T, + level
     Dithering(#[enum2egui(label = "Dithering type")] Dithering),       // D
 }
 
 impl Default for Conversion {
     fn default() -> Self {
-        Conversion::Tresholding(TresholdLevel::default())
+        Conversion::Tresholding
     }
 }
 
@@ -248,9 +248,8 @@ pub struct EinkWindowSetting {
     pub settings: DriverMode,
 }
 
-pub fn load_settings() -> Result<Vec<EinkWindowSetting>, Box<dyn std::error::Error>> {
-    let home = std::env::var("HOME")?;
-    let path = format!("{}/.config/eink_window_settings/config.ron", home);
+pub fn load_settings(user: String) -> Result<Vec<EinkWindowSetting>, Box<dyn std::error::Error>> {
+    let path = format!("/home/{}/.config/eink_window_settings/config.ron", user);
     let contents = std::fs::read_to_string(path)?;
     let settings: Vec<EinkWindowSetting> = ron::from_str(&contents)?;
     Ok(settings)

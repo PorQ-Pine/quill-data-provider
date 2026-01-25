@@ -57,7 +57,9 @@ fn main() -> eframe::Result {
 
     let mut settings = Vec::new();
 
-    if let Ok(loaded_settings) = load_settings() {
+    let home_path = std::env::var("USER").unwrap_or_default();
+    println!("User is: {}", home_path);
+    if let Ok(loaded_settings) = load_settings(home_path) {
         settings = loaded_settings;
     }
 
@@ -86,6 +88,8 @@ struct MyApp {
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
+        ctx.set_visuals(egui::Visuals::light());
+
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
                 if ui.button("Save").clicked() {

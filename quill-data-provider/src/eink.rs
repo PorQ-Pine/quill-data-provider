@@ -1,5 +1,7 @@
-use quill_data_provider_lib::{BitDepth, Conversion, DEFAULT_TRESHOLDING_LEVEL, Dithering, DriverMode, Redraw, run_cmd};
 use log::{debug, error};
+use quill_data_provider_lib::{
+    BitDepth, Conversion, Dithering, DriverMode, Redraw, RedrawOptions, TresholdLevel, run_cmd,
+};
 use std::str::FromStr;
 
 // enum ScreenOptions {
@@ -96,7 +98,12 @@ pub async fn eww_screen_config_to_enum(config: &EwwScreenConfig) -> DriverMode {
 
     fn get_redraw(config: &EwwScreenConfig) -> Redraw {
         if config.redraw_fastdrawing {
-            return Redraw::FastDrawing(config.redraw_level_value);
+            // map to 10-300
+            let delay_drawing =
+                ((config.redraw_level_value - 1) as f32 / 99.0 * 290.0 + 10.0).round() as u16;
+            return Redraw::FastDrawing(RedrawOptions {
+                delay: delay_drawing,
+            });
         }
         if config.redraw_disablefastdrawing {
             return Redraw::DisableFastDrawing;
@@ -110,7 +117,7 @@ pub async fn eww_screen_config_to_enum(config: &EwwScreenConfig) -> DriverMode {
             return Conversion::Dithering(dithering);
         }
         if config.conv_tresholding {
-            return Conversion::Tresholding(config.thresholding_level_value);
+            return Conversion::Tresholding;
         }
         panic!("No conversion, what?");
     };
@@ -118,7 +125,10 @@ pub async fn eww_screen_config_to_enum(config: &EwwScreenConfig) -> DriverMode {
 
     let get_bitdepth = |config: &EwwScreenConfig| -> BitDepth {
         if config.bitdepth_y1 {
-            return BitDepth::Y1(conversion);
+            return BitDepth::Y1(
+                conversion,
+                TresholdLevel::get_from_eww(config.thresholding_level_value),
+            );
         }
         if config.bitdepth_y2 {
             return BitDepth::Y2(conversion, redraw);
@@ -328,8 +338,7 @@ impl VisibleSettings {
 
 pub async fn set_screen_settings(
     screen_settings: DriverMode,
-    state: &str
-    // gamma_channel_tx: &mut tokio::sync::mpsc::Sender<GammaControl>,
+    state: &str, // gamma_channel_tx: &mut tokio::sync::mpsc::Sender<GammaControl>,
 ) {
     let current_render_hint = RenderHint::get_render_hint().await;
     let mut render_hint = current_render_hint;
@@ -341,7 +350,7 @@ pub async fn set_screen_settings(
             let mut maybe_conversion = None;
             let mut maybe_redraw = None;
             match bit_depth {
-                BitDepth::Y1(conversion) => {
+                BitDepth::Y1(conversion, _tresholding_level) => {
                     maybe_conversion = Some(conversion);
                     render_hint.bit_depth = PureBitDepth::Y1;
                     render_hint.redraw = PureRedraw::DisableFastDrawing // Doesn't make sense
@@ -360,14 +369,15 @@ pub async fn set_screen_settings(
             if let Some(conversion) = maybe_conversion {
                 visible_settings.conversion = true;
                 match conversion {
-                    Conversion::Tresholding(tresholding_level) => {
+                    Conversion::Tresholding => {
                         render_hint.conversion = PureConversion::Tresholding;
                         // Only in Y1
                         match bit_depth {
-                            BitDepth::Y1(_conversion) => {
+                            BitDepth::Y1(_conversion, tresholding_level) => {
                                 visible_settings.thresholding_level = true;
                                 debug!("Setting tresholding value");
-                                Conversion::set_tresholding_level(tresholding_level, true).await;
+                                tresholding_level.set().await;
+                                tresholding_level.set_eww_number().await;
                             }
                             _ => {}
                         }
@@ -389,14 +399,11 @@ pub async fn set_screen_settings(
             if let Some(redraw) = maybe_redraw {
                 visible_settings.redraw = true;
                 match redraw {
-                    Redraw::FastDrawing(mut delay_drawing) => {
+                    Redraw::FastDrawing(delay_drawing) => {
                         render_hint.redraw = PureRedraw::FastDrawing;
 
                         visible_settings.redraw_level = true;
-                        // map to 10-300
-                        delay_drawing =
-                            ((delay_drawing - 1) as f32 / 99.0 * 290.0 + 10.0).round() as u16;
-                        Redraw::apply_fast_drawing(delay_drawing).await;
+                        delay_drawing.set().await;
                     }
                     Redraw::DisableFastDrawing => {
                         render_hint.redraw = PureRedraw::DisableFastDrawing
@@ -412,7 +419,9 @@ pub async fn set_screen_settings(
 
     if !visible_settings.thresholding_level {
         debug!("Setting default treshold level");
-        Conversion::set_tresholding_level(DEFAULT_TRESHOLDING_LEVEL, false).await;
+        let tresholding_level = TresholdLevel::default();
+        tresholding_level.set().await;
+        tresholding_level.set_eww_number().await; // So when it's visible again, it's the good number
 
         /*
         gamma_channel_tx

@@ -77,8 +77,8 @@ impl std::fmt::Display for BitDepth {
 
 #[derive(Copy, Clone, Debug, PartialEq, Gui, Serialize, Deserialize)]
 pub enum Conversion {
-    Tresholding, // T, + level
-    Dithering(#[enum2egui(label = "Dithering type")] Dithering),       // D
+    Tresholding,                                                 // T, + level
+    Dithering(#[enum2egui(label = "Dithering type")] Dithering), // D
 }
 
 impl Default for Conversion {
@@ -121,22 +121,8 @@ impl TresholdLevel {
             error!("Wrong treshold level");
         }
         */
-        let level: u8 = match self {
-            TresholdLevel::_2 => 2,
-            TresholdLevel::_3 => 3,
-            TresholdLevel::_4 => 4,
-            TresholdLevel::_5 => 5,
-            TresholdLevel::_6 => 6,
-            TresholdLevel::_7 => 7,
-            TresholdLevel::_8 => 8,
-            TresholdLevel::_9 => 9,
-            TresholdLevel::_10 => 10,
-            TresholdLevel::_11 => 11,
-            TresholdLevel::_12 => 12,
-            TresholdLevel::_13 => 13,
-            TresholdLevel::_14 => 14,
-            TresholdLevel::_15 => 15,
-        };
+
+        let level: u8 = self.to_u8();
 
         if let Err(e) = tokio::fs::write(
             "/sys/module/rockchip_ebc_blit_neon/parameters/y4_threshold_y1",
@@ -146,6 +132,20 @@ impl TresholdLevel {
         {
             error!("Failed to set threshold: {}", e);
         }
+    }
+
+    pub fn get_from_eww(level: u8) -> Self {
+        let converted = 2 + ((level.saturating_sub(1) as f32 / 99.0) * 13.0).round() as u8;
+        TresholdLevel::try_from(converted).unwrap()
+    }
+
+    pub async fn set_eww_number(&self) {
+        let level: u8 = self.to_u8();
+        run_cmd(&format!(
+            "eww --no-daemonize update thresholding_level_value_real={}",
+            level
+        ))
+        .await;
     }
 
     /*
@@ -162,6 +162,49 @@ impl TresholdLevel {
         }
     }
     */
+
+    pub fn to_u8(&self) -> u8 {
+        match self {
+            TresholdLevel::_2 => 2,
+            TresholdLevel::_3 => 3,
+            TresholdLevel::_4 => 4,
+            TresholdLevel::_5 => 5,
+            TresholdLevel::_6 => 6,
+            TresholdLevel::_7 => 7,
+            TresholdLevel::_8 => 8,
+            TresholdLevel::_9 => 9,
+            TresholdLevel::_10 => 10,
+            TresholdLevel::_11 => 11,
+            TresholdLevel::_12 => 12,
+            TresholdLevel::_13 => 13,
+            TresholdLevel::_14 => 14,
+            TresholdLevel::_15 => 15,
+        }
+    }
+}
+
+impl TryFrom<u8> for TresholdLevel {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            2 => Ok(TresholdLevel::_2),
+            3 => Ok(TresholdLevel::_3),
+            4 => Ok(TresholdLevel::_4),
+            5 => Ok(TresholdLevel::_5),
+            6 => Ok(TresholdLevel::_6),
+            7 => Ok(TresholdLevel::_7),
+            8 => Ok(TresholdLevel::_8),
+            9 => Ok(TresholdLevel::_9),
+            10 => Ok(TresholdLevel::_10),
+            11 => Ok(TresholdLevel::_11),
+            12 => Ok(TresholdLevel::_12),
+            13 => Ok(TresholdLevel::_13),
+            14 => Ok(TresholdLevel::_14),
+            15 => Ok(TresholdLevel::_15),
+            _ => Err(()),
+        }
+    }
 }
 
 impl std::fmt::Display for TresholdLevel {
@@ -180,7 +223,7 @@ pub enum Redraw {
 #[derive(Copy, Clone, Debug, PartialEq, Gui, Serialize, Deserialize)]
 pub struct RedrawOptions {
     #[enum2egui(label = "\nRedraw delay (10-300 is reasonable)")]
-    delay: u16,
+    pub delay: u16,
 }
 
 impl RedrawOptions {

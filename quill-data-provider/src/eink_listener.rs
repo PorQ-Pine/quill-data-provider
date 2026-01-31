@@ -1,4 +1,4 @@
-use quill_data_provider_lib::{BitDepth, Conversion, DEFAULT_TRESHOLDING_LEVEL, DriverMode, Redraw, run_cmd};
+use quill_data_provider_lib::{BitDepth, Conversion, DriverMode, Redraw, run_cmd};
 use enums::Requests;
 use log::{debug, error, info};
 use std::time::Duration;
@@ -20,7 +20,7 @@ impl EinkListener {
         // Perfect defaults, middle ground between speed and look
         set_screen_settings(
             DriverMode::Normal(BitDepth::Y2(
-                Conversion::Tresholding(DEFAULT_TRESHOLDING_LEVEL),
+                Conversion::Tresholding,
                 Redraw::DisableFastDrawing,
             )),
             // &mut self.gamma_channel_tx,

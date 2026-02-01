@@ -1,8 +1,10 @@
 use log::{debug, error};
 use quill_data_provider_lib::{
-    BitDepth, Conversion, Dithering, DriverMode, Redraw, RedrawOptions, TresholdLevel, run_cmd,
+    BitDepth, Conversion, Dithering, DriverMode, PINENOTE_ENABLE_SOCKET, Redraw, RedrawOptions,
+    TresholdLevel, run_cmd,
 };
 use std::str::FromStr;
+use tokio::{io::AsyncWriteExt, net::UnixStream};
 
 // enum ScreenOptions {
 // busctl --user call org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 GlobalRefresh
@@ -16,11 +18,12 @@ pub async fn refresh_screen() {
 
 #[derive(Debug)]
 pub struct EwwScreenConfig {
+    pub window_settings: bool,
+    driver_normal: bool,
+    driver_fast: bool,
     dithering_bayer: bool,
     dithering_blue_noise16: bool,
     dithering_blue_noise32: bool,
-    driver_normal: bool,
-    driver_fast: bool,
     bitdepth_y1: bool,
     bitdepth_y2: bool,
     bitdepth_y4: bool,
@@ -62,22 +65,49 @@ fn parse_number<T: std::str::FromStr + std::fmt::Debug>(state: &str, key: &str, 
         })
 }
 
-pub async fn get_eww_screen_config(state: &str) -> EwwScreenConfig {
-    EwwScreenConfig {
-        dithering_bayer: parse_bool(state, "dithering_bayer"),
-        dithering_blue_noise16: parse_bool(state, "dithering_bluenoise16"),
-        dithering_blue_noise32: parse_bool(state, "dithering_bluenoise32"),
-        driver_normal: parse_bool(state, "driver_normal_mode"),
-        driver_fast: parse_bool(state, "driver_fast_mode"),
-        bitdepth_y1: parse_bool(state, "bitdepth_y1"),
-        bitdepth_y2: parse_bool(state, "bitdepth_y2"),
-        bitdepth_y4: parse_bool(state, "bitdepth_y4"),
-        conv_tresholding: parse_bool(state, "conversion_tresholding"),
-        thresholding_level_value: parse_number(state, "thresholding_level_value", 39),
-        conv_dithering: parse_bool(state, "conversion_dithering"),
-        redraw_fastdrawing: parse_bool(state, "redraw_fast_drawing"),
-        redraw_level_value: parse_number(state, "redraw_level_value", 25),
-        redraw_disablefastdrawing: parse_bool(state, "redraw_disabled"),
+impl EwwScreenConfig {
+    pub async fn get_eww_screen_config(state: &str) -> Self {
+        Self {
+            window_settings: parse_bool(state, "per_window_settings"),
+            driver_normal: parse_bool(state, "driver_normal_mode"),
+            driver_fast: parse_bool(state, "driver_fast_mode"),
+            dithering_bayer: parse_bool(state, "dithering_bayer"),
+            dithering_blue_noise16: parse_bool(state, "dithering_bluenoise16"),
+            dithering_blue_noise32: parse_bool(state, "dithering_bluenoise32"),
+            bitdepth_y1: parse_bool(state, "bitdepth_y1"),
+            bitdepth_y2: parse_bool(state, "bitdepth_y2"),
+            bitdepth_y4: parse_bool(state, "bitdepth_y4"),
+            conv_tresholding: parse_bool(state, "conversion_tresholding"),
+            thresholding_level_value: parse_number(state, "thresholding_level_value", 39),
+            conv_dithering: parse_bool(state, "conversion_dithering"),
+            redraw_fastdrawing: parse_bool(state, "redraw_fast_drawing"),
+            redraw_level_value: parse_number(state, "redraw_level_value", 25),
+            redraw_disablefastdrawing: parse_bool(state, "redraw_disabled"),
+        }
+    }
+
+    pub async fn set_window_settings(&self) {
+        match UnixStream::connect(PINENOTE_ENABLE_SOCKET).await {
+            Ok(mut stream) => {
+                let msg = if self.window_settings {
+                    "true"
+                } else {
+                    "false"
+                };
+
+                if let Err(e) = stream.write_all(msg.as_bytes()).await {
+                    error!("Failed to write to bridge socket: {}", e);
+                }
+
+                let _ = stream.shutdown().await;
+            }
+            Err(e) => {
+                error!(
+                    "Failed to connect to bridge socket at {}: {}",
+                    PINENOTE_ENABLE_SOCKET, e
+                );
+            }
+        }
     }
 }
 
@@ -437,5 +467,6 @@ pub async fn set_screen_settings(
 
     visible_settings.set(state).await;
     // refresh_screen().await;
+
     debug!("Set screen settings finished!");
 }

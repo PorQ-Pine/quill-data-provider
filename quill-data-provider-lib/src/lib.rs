@@ -297,3 +297,5 @@ pub fn load_settings(user: String) -> Result<Vec<EinkWindowSetting>, Box<dyn std
     let settings: Vec<EinkWindowSetting> = ron::from_str(&contents)?;
     Ok(settings)
 }
+
+pub const PINENOTE_ENABLE_SOCKET: &str = "/tmp/ps_quill_niri.sock";

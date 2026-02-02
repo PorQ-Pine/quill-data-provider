@@ -62,7 +62,7 @@ fn main() -> eframe::Result {
 
     // So it opens the ones in the repo here. Yes, it does not support arm mac
     #[cfg(target_arch = "x86_64")]
-    let path = "default/config.ron";
+    let path = "other/default/config.ron";
     #[cfg(not(target_arch = "x86_64"))]
     {
         let user = std::env::var("USER").unwrap_or_default();

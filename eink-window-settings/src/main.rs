@@ -152,7 +152,7 @@ impl eframe::App for MyApp {
             egui::ScrollArea::both()
                 // .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
                 .show(ui, |ui| {
-                    ui.heading("Eink window settings");
+                    ui.heading("eInk window settings");
                     ui.label("Values which are global, but will be set for the currently focused window (or defaults if not apply, for the focused window):
 - Treshold level
 - Dithering type

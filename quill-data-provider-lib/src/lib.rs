@@ -44,7 +44,7 @@ impl std::fmt::Display for DriverMode {
 impl Default for DriverMode {
     fn default() -> Self {
         DriverMode::Normal(BitDepth::Y2(
-            Conversion::Tresholding,
+            Conversion::Thresholding,
             Redraw::DisableFastDrawing,
         ))
     }
@@ -55,7 +55,10 @@ impl Default for DriverMode {
 // busctl --user set-property org.pinenote.PineNoteCtl /org/pinenote/PineNoteCtl org.pinenote.Ebc1 DefaultHintHr s "Y1|T|R"
 #[derive(Copy, Clone, Debug, PartialEq, Gui, Serialize, Deserialize)]
 pub enum BitDepth {
-    Y1(#[enum2egui(label = "Conversion")] Conversion, TresholdLevel),
+    Y1(
+        #[enum2egui(label = "Conversion")] Conversion,
+        ThresholdLevel,
+    ),
     Y2(
         #[enum2egui(label = "Conversion")] Conversion,
         #[enum2egui(label = "Fast redraw")] Redraw,
@@ -77,13 +80,13 @@ impl std::fmt::Display for BitDepth {
 
 #[derive(Copy, Clone, Debug, PartialEq, Gui, Serialize, Deserialize)]
 pub enum Conversion {
-    Tresholding,                                                 // T, + level
+    Thresholding,                                                // T, + level
     Dithering(#[enum2egui(label = "Dithering type")] Dithering), // D
 }
 
 impl Default for Conversion {
     fn default() -> Self {
-        Conversion::Tresholding
+        Conversion::Thresholding
     }
 }
 
@@ -96,7 +99,7 @@ impl std::fmt::Display for Conversion {
 // So the configurator works well...
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Gui, Default, Serialize, Deserialize)]
-pub enum TresholdLevel {
+pub enum ThresholdLevel {
     _2,
     _3,
     _4,
@@ -114,7 +117,7 @@ pub enum TresholdLevel {
     _15,
 }
 
-impl TresholdLevel {
+impl ThresholdLevel {
     pub async fn set(&self) {
         /*
         if level < 2 || level > 15 {
@@ -136,7 +139,7 @@ impl TresholdLevel {
 
     pub fn get_from_eww(level: u8) -> Self {
         let converted = 2 + ((level.saturating_sub(1) as f32 / 99.0) * 13.0).round() as u8;
-        TresholdLevel::try_from(converted).unwrap()
+        ThresholdLevel::try_from(converted).unwrap()
     }
 
     pub async fn set_eww_number(&self) {
@@ -149,9 +152,9 @@ impl TresholdLevel {
     }
 
     /*
-    pub async fn set_tresholding_level(level: u8, show_gui: bool) {
+    pub async fn set_Thresholding_level(level: u8, show_gui: bool) {
         let converted = 2 + ((level.saturating_sub(1) as f32 / 99.0) * 13.0).round() as u8;
-        Self::set_tresholding_level_internal(converted).await;
+        Self::set_Thresholding_level_internal(converted).await;
 
         if show_gui {
             run_cmd(&format!(
@@ -165,49 +168,49 @@ impl TresholdLevel {
 
     pub fn to_u8(&self) -> u8 {
         match self {
-            TresholdLevel::_2 => 2,
-            TresholdLevel::_3 => 3,
-            TresholdLevel::_4 => 4,
-            TresholdLevel::_5 => 5,
-            TresholdLevel::_6 => 6,
-            TresholdLevel::_7 => 7,
-            TresholdLevel::_8 => 8,
-            TresholdLevel::_9 => 9,
-            TresholdLevel::_10 => 10,
-            TresholdLevel::_11 => 11,
-            TresholdLevel::_12 => 12,
-            TresholdLevel::_13 => 13,
-            TresholdLevel::_14 => 14,
-            TresholdLevel::_15 => 15,
+            ThresholdLevel::_2 => 2,
+            ThresholdLevel::_3 => 3,
+            ThresholdLevel::_4 => 4,
+            ThresholdLevel::_5 => 5,
+            ThresholdLevel::_6 => 6,
+            ThresholdLevel::_7 => 7,
+            ThresholdLevel::_8 => 8,
+            ThresholdLevel::_9 => 9,
+            ThresholdLevel::_10 => 10,
+            ThresholdLevel::_11 => 11,
+            ThresholdLevel::_12 => 12,
+            ThresholdLevel::_13 => 13,
+            ThresholdLevel::_14 => 14,
+            ThresholdLevel::_15 => 15,
         }
     }
 }
 
-impl TryFrom<u8> for TresholdLevel {
+impl TryFrom<u8> for ThresholdLevel {
     type Error = ();
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            2 => Ok(TresholdLevel::_2),
-            3 => Ok(TresholdLevel::_3),
-            4 => Ok(TresholdLevel::_4),
-            5 => Ok(TresholdLevel::_5),
-            6 => Ok(TresholdLevel::_6),
-            7 => Ok(TresholdLevel::_7),
-            8 => Ok(TresholdLevel::_8),
-            9 => Ok(TresholdLevel::_9),
-            10 => Ok(TresholdLevel::_10),
-            11 => Ok(TresholdLevel::_11),
-            12 => Ok(TresholdLevel::_12),
-            13 => Ok(TresholdLevel::_13),
-            14 => Ok(TresholdLevel::_14),
-            15 => Ok(TresholdLevel::_15),
+            2 => Ok(ThresholdLevel::_2),
+            3 => Ok(ThresholdLevel::_3),
+            4 => Ok(ThresholdLevel::_4),
+            5 => Ok(ThresholdLevel::_5),
+            6 => Ok(ThresholdLevel::_6),
+            7 => Ok(ThresholdLevel::_7),
+            8 => Ok(ThresholdLevel::_8),
+            9 => Ok(ThresholdLevel::_9),
+            10 => Ok(ThresholdLevel::_10),
+            11 => Ok(ThresholdLevel::_11),
+            12 => Ok(ThresholdLevel::_12),
+            13 => Ok(ThresholdLevel::_13),
+            14 => Ok(ThresholdLevel::_14),
+            15 => Ok(ThresholdLevel::_15),
             _ => Err(()),
         }
     }
 }
 
-impl std::fmt::Display for TresholdLevel {
+impl std::fmt::Display for ThresholdLevel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
@@ -291,11 +294,36 @@ pub struct EinkWindowSetting {
     pub settings: DriverMode,
 }
 
+static DEFAULT_WINDOW_SETTINGS: &str =
+    include_str!("../../eink_window_settings/default/config.ron");
 // format!("/home/{}/.config/eink_window_settings/config.ron", user)
-pub fn load_window_settings(path: String) -> Result<Vec<EinkWindowSetting>, Box<dyn std::error::Error>> {
-    let contents = std::fs::read_to_string(path)?;
-    let settings: Vec<EinkWindowSetting> = ron::from_str(&contents)?;
-    Ok(settings)
+pub fn load_window_settings(path: String) -> Vec<EinkWindowSetting> {
+    let contents = match std::fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(_) => {
+            eprintln!(
+                "File {} not found or unreadable. Creating default settings.",
+                path
+            );
+            std::fs::write(&path, DEFAULT_WINDOW_SETTINGS)
+                .unwrap_or_else(|e| panic!("Failed to write default settings to {}: {}", path, e));
+            DEFAULT_WINDOW_SETTINGS.to_string()
+        }
+    };
+
+    match ron::from_str(&contents) {
+        Ok(settings) => settings,
+        Err(_) => {
+            eprintln!(
+                "Failed to parse settings from file. Rewriting with default settings at {}",
+                path
+            );
+            std::fs::write(&path, DEFAULT_WINDOW_SETTINGS)
+                .unwrap_or_else(|e| panic!("Failed to write default settings to {}: {}", path, e));
+            ron::from_str(DEFAULT_WINDOW_SETTINGS)
+                .unwrap_or_else(|e| panic!("Failed to parse default settings: {}", e))
+        }
+    }
 }
 
 pub const PINENOTE_ENABLE_SOCKET: &str = "/tmp/ps_quill_niri.sock";

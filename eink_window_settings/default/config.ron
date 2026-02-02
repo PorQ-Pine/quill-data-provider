@@ -1,11 +1,11 @@
 [
     (
         app_id: "Alacritty",
-        settings: Normal(Y2(Tresholding, DisableFastDrawing)),
+        settings: Normal(Y2(Thresholding, DisableFastDrawing)),
     ),
     (
         app_id: "org.freedesktop.Xwayland",
-        settings: Normal(Y1(Tresholding, _12)),
+        settings: Normal(Y1(Thresholding, _12)),
     ),
     (
         app_id: "obsidian",
@@ -32,8 +32,14 @@
         settings: Fast(Bayer),
     ),
     (
+        app_id: "anki",
+        settings: Normal(Y2(Thresholding, FastDrawing((
+            delay: 25,
+        )))),
+    ),
+        (
         app_id: "EinkWindowSettings",
-        settings: Normal(Y2(Tresholding, FastDrawing((
+        settings: Normal(Y2(Thresholding, FastDrawing((
             delay: 25,
         )))),
     ),

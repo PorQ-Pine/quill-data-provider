@@ -60,8 +60,6 @@ fn main() -> eframe::Result {
         }
     });
 
-    let mut settings = Vec::new();
-
     // So it opens the ones in the repo here. Yes, it does not support arm mac
     #[cfg(target_arch = "x86_64")]
     let path = "default/config.ron";
@@ -71,10 +69,8 @@ fn main() -> eframe::Result {
         let path = format!("/home/{}/.config/eink_window_settings/config.ron", user);
     }
 
-    println!("Path is: {}", path);
-    if let Ok(loaded_settings) = load_window_settings(path.to_string()) {
-        settings = loaded_settings;
-    }
+    println!("Path for settings is: {}", path);
+    let settings = load_window_settings(path.to_string());
 
     let app = MyApp {
         settings: settings,

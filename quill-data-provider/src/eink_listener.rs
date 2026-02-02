@@ -18,7 +18,7 @@ pub async fn default_set_screen_settings() {
     // Perfect defaults, middle ground between speed and look
     set_screen_settings(
         DriverMode::Normal(BitDepth::Y2(
-            Conversion::Tresholding,
+            Conversion::Thresholding,
             Redraw::DisableFastDrawing,
         )),
         // &mut self.gamma_channel_tx,

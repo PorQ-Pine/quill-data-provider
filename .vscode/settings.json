@@ -1,0 +1,9 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "${workspaceFolder}/eink-window-settings/Cargo.toml",
+        "${workspaceFolder}/enums/Cargo.toml",
+        "${workspaceFolder}/eww-data-requester/Cargo.toml",
+        "${workspaceFolder}/quill-data-provider/Cargo.toml",
+        "${workspaceFolder}/quill-data-provider-lib/Cargo.toml",
+    ],
+}

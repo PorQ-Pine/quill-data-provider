@@ -295,8 +295,10 @@ pub struct EinkWindowSetting {
 }
 
 static DEFAULT_WINDOW_SETTINGS: &str =
-    include_str!("../../eink_window_settings/other/default/config.ron");
-// format!("/home/{}/.config/eink_window_settings/config.ron", user)
+    include_str!("../../eink-window-settings/other/default/config.ron");
+pub const WINDOW_SETTINGS_HOME_CONFIG_DIR: &str = "/.config/eink-window-settings/";
+pub const WINDOW_SETTINGS_CONFIG_NAME: &str = "config.ron";
+
 pub fn load_window_settings(path: String) -> Vec<EinkWindowSetting> {
     let contents = match std::fs::read_to_string(&path) {
         Ok(c) => c,

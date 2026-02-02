@@ -982,7 +982,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "eink_window_settings"
+name = "eink-window-settings"
 version = "0.1.0"
 dependencies = [
  "eframe",

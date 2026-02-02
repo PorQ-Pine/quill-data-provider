@@ -1,7 +1,7 @@
 use log::{debug, error};
 use quill_data_provider_lib::{
     BitDepth, Conversion, Dithering, DriverMode, PINENOTE_ENABLE_SOCKET, Redraw, RedrawOptions,
-    TresholdLevel, run_cmd,
+    ThresholdLevel, run_cmd,
 };
 use std::str::FromStr;
 use tokio::{io::AsyncWriteExt, net::UnixStream};
@@ -27,7 +27,7 @@ pub struct EwwScreenConfig {
     bitdepth_y1: bool,
     bitdepth_y2: bool,
     bitdepth_y4: bool,
-    conv_tresholding: bool,
+    conv_thresholding: bool,
     thresholding_level_value: u8,
     conv_dithering: bool,
     redraw_fastdrawing: bool,
@@ -77,7 +77,7 @@ impl EwwScreenConfig {
             bitdepth_y1: parse_bool(state, "bitdepth_y1"),
             bitdepth_y2: parse_bool(state, "bitdepth_y2"),
             bitdepth_y4: parse_bool(state, "bitdepth_y4"),
-            conv_tresholding: parse_bool(state, "conversion_tresholding"),
+            conv_thresholding: parse_bool(state, "conversion_thresholding"),
             thresholding_level_value: parse_number(state, "thresholding_level_value", 39),
             conv_dithering: parse_bool(state, "conversion_dithering"),
             redraw_fastdrawing: parse_bool(state, "redraw_fast_drawing"),
@@ -146,8 +146,8 @@ pub async fn eww_screen_config_to_enum(config: &EwwScreenConfig) -> DriverMode {
         if config.conv_dithering {
             return Conversion::Dithering(dithering);
         }
-        if config.conv_tresholding {
-            return Conversion::Tresholding;
+        if config.conv_thresholding {
+            return Conversion::Thresholding;
         }
         panic!("No conversion, what?");
     };
@@ -157,7 +157,7 @@ pub async fn eww_screen_config_to_enum(config: &EwwScreenConfig) -> DriverMode {
         if config.bitdepth_y1 {
             return BitDepth::Y1(
                 conversion,
-                TresholdLevel::get_from_eww(config.thresholding_level_value),
+                ThresholdLevel::get_from_eww(config.thresholding_level_value),
             );
         }
         if config.bitdepth_y2 {
@@ -192,7 +192,7 @@ pub enum PureBitDepth {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum PureConversion {
-    Tresholding,
+    Thresholding,
     Dithering,
 }
 
@@ -248,7 +248,7 @@ impl FromStr for PureBitDepth {
 impl ToString for PureConversion {
     fn to_string(&self) -> String {
         match self {
-            PureConversion::Tresholding => "T".into(),
+            PureConversion::Thresholding => "T".into(),
             PureConversion::Dithering => "D".into(),
         }
     }
@@ -258,7 +258,7 @@ impl FromStr for PureConversion {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "T" => Ok(PureConversion::Tresholding),
+            "T" => Ok(PureConversion::Thresholding),
             "D" => Ok(PureConversion::Dithering),
             _ => Err(()),
         }
@@ -294,7 +294,7 @@ impl FromStr for RenderHint {
         let rw = parts.next().unwrap_or("r");
 
         let bit_depth = bd.parse()?;
-        let conversion = cv.parse().unwrap_or(PureConversion::Tresholding);
+        let conversion = cv.parse().unwrap_or(PureConversion::Thresholding);
         let redraw = rw.parse().unwrap_or(PureRedraw::FastDrawing);
 
         Ok(RenderHint {
@@ -380,7 +380,7 @@ pub async fn set_screen_settings(
             let mut maybe_conversion = None;
             let mut maybe_redraw = None;
             match bit_depth {
-                BitDepth::Y1(conversion, _tresholding_level) => {
+                BitDepth::Y1(conversion, _thresholding_level) => {
                     maybe_conversion = Some(conversion);
                     render_hint.bit_depth = PureBitDepth::Y1;
                     render_hint.redraw = PureRedraw::DisableFastDrawing // Doesn't make sense
@@ -399,15 +399,15 @@ pub async fn set_screen_settings(
             if let Some(conversion) = maybe_conversion {
                 visible_settings.conversion = true;
                 match conversion {
-                    Conversion::Tresholding => {
-                        render_hint.conversion = PureConversion::Tresholding;
+                    Conversion::Thresholding => {
+                        render_hint.conversion = PureConversion::Thresholding;
                         // Only in Y1
                         match bit_depth {
-                            BitDepth::Y1(_conversion, tresholding_level) => {
+                            BitDepth::Y1(_conversion, thresholding_level) => {
                                 visible_settings.thresholding_level = true;
-                                debug!("Setting tresholding value");
-                                tresholding_level.set().await;
-                                tresholding_level.set_eww_number().await;
+                                debug!("Setting thresholding value");
+                                thresholding_level.set().await;
+                                thresholding_level.set_eww_number().await;
                             }
                             _ => {}
                         }
@@ -449,9 +449,9 @@ pub async fn set_screen_settings(
 
     if !visible_settings.thresholding_level {
         debug!("Setting default treshold level");
-        let tresholding_level = TresholdLevel::default();
-        tresholding_level.set().await;
-        tresholding_level.set_eww_number().await; // So when it's visible again, it's the good number
+        let thresholding_level = ThresholdLevel::default();
+        thresholding_level.set().await;
+        thresholding_level.set_eww_number().await; // So when it's visible again, it's the good number
 
         /*
         gamma_channel_tx

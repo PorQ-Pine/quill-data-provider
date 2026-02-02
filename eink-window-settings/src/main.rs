@@ -7,7 +7,10 @@ use std::{
 
 use eframe::egui;
 use enum2egui::GuiInspect;
-use quill_data_provider_lib::{EinkWindowSetting, load_window_settings};
+use quill_data_provider_lib::{
+    EinkWindowSetting, WINDOW_SETTINGS_CONFIG_NAME, WINDOW_SETTINGS_HOME_CONFIG_DIR,
+    load_window_settings,
+};
 
 use crate::style::style;
 
@@ -19,10 +22,10 @@ fn save_settings(settings: &Vec<EinkWindowSetting>) -> Result<(), Box<dyn std::e
             return Err(format!("Id at index {} is empty", i).into());
         }
     }
-    let home = std::env::var("HOME")?;
-    let dir = format!("{}/.config/eink_window_settings", home);
+    let user = std::env::var("USER")?;
+    let dir = format!("/home/{}{}", user, WINDOW_SETTINGS_HOME_CONFIG_DIR);
     std::fs::create_dir_all(&dir)?;
-    let path = std::path::Path::new(&dir).join("config.ron");
+    let path = std::path::Path::new(&dir).join(WINDOW_SETTINGS_CONFIG_NAME);
     let ron = ron::ser::to_string_pretty(settings, ron::ser::PrettyConfig::default())?;
     std::fs::write(path, ron)?;
     Ok(())
@@ -60,13 +63,21 @@ fn main() -> eframe::Result {
         }
     });
 
+    #[allow(unused)]
+    let mut path: String = String::new();
     // So it opens the ones in the repo here. Yes, it does not support arm mac
     #[cfg(target_arch = "x86_64")]
-    let path = "other/default/config.ron";
+    {
+        path = "other/default/config.ron".to_string();
+    }
     #[cfg(not(target_arch = "x86_64"))]
     {
-        let user = std::env::var("USER").unwrap_or_default();
-        let path = format!("/home/{}/.config/eink_window_settings/config.ron", user);
+        let username = std::env::var("USER").unwrap_or_default();
+        path = format!(
+            "/home/{}{}{}",
+            username, WINDOW_SETTINGS_HOME_CONFIG_DIR, WINDOW_SETTINGS_CONFIG_NAME
+        )
+        .to_string();
     }
 
     println!("Path for settings is: {}", path);

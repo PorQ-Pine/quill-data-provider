@@ -300,6 +300,11 @@ pub const WINDOW_SETTINGS_HOME_CONFIG_DIR: &str = "/.config/eink-window-settings
 pub const WINDOW_SETTINGS_CONFIG_NAME: &str = "config.ron";
 
 pub fn load_window_settings(path: String) -> Vec<EinkWindowSetting> {
+    if let Some(parent) = std::path::Path::new(&path).parent() {
+        std::fs::create_dir_all(parent)
+            .unwrap_or_else(|e| panic!("Failed to create directories for {}: {}", path, e));
+    }
+
     let contents = match std::fs::read_to_string(&path) {
         Ok(c) => c,
         Err(_) => {

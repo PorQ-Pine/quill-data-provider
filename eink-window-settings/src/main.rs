@@ -16,7 +16,7 @@ use crate::style::style;
 
 mod style;
 
-fn save_settings(settings: &Vec<EinkWindowSetting>) -> Result<(), Box<dyn std::error::Error>> {
+fn save_settings(settings: &Vec<EinkWindowSetting>) -> Result<String, Box<dyn std::error::Error>> {
     for (i, set) in settings.iter().enumerate() {
         if set.app_id.is_empty() {
             return Err(format!("Id at index {} is empty", i).into());
@@ -28,7 +28,7 @@ fn save_settings(settings: &Vec<EinkWindowSetting>) -> Result<(), Box<dyn std::e
     let path = std::path::Path::new(&dir).join(WINDOW_SETTINGS_CONFIG_NAME);
     let ron = ron::ser::to_string_pretty(settings, ron::ser::PrettyConfig::default())?;
     std::fs::write(path, ron)?;
-    Ok(())
+    Ok(format!("Succesfully saved settings").into())
 }
 
 fn main() -> eframe::Result {
@@ -88,7 +88,7 @@ fn main() -> eframe::Result {
         windows_rx: rx,
         windows: Vec::new(),
         zoom_factor: 1.2,
-        error: None,
+        window_message: None,
     };
 
     eframe::run_native(
@@ -109,7 +109,7 @@ struct MyApp {
     windows_rx: Receiver<Vec<String>>,
     windows: Vec<String>,
     zoom_factor: f32,
-    error: Option<String>,
+    window_message: Option<String>,
 }
 
 impl eframe::App for MyApp {
@@ -117,7 +117,11 @@ impl eframe::App for MyApp {
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
                 if ui.button("Save").clicked() {
-                    self.error = save_settings(&self.settings).err().map(|e| e.to_string());
+                    let status = save_settings(&self.settings);
+                    match status {
+                        Ok(x) => self.window_message = Some(x),
+                        Err(x) => self.window_message = Some(x.to_string()),
+                    }
                 }
                 if ui.button("Zoom in").clicked() {
                     self.zoom_factor *= 1.2;
@@ -158,21 +162,24 @@ impl eframe::App for MyApp {
                 });
         });
 
-        if let Some(err) = self.error.take() {
+        if let Some(message) = self.window_message.take() {
             let mut keep = true;
 
-            egui::Window::new("Error")
+            egui::Window::new("Message")
                 .collapsible(false)
                 .resizable(false)
+                .default_pos(ctx.content_rect().center())
                 .show(ctx, |ui| {
-                    ui.label(&err);
-                    if ui.button("OK").clicked() {
-                        keep = false;
-                    }
+                    ui.vertical_centered_justified(|ui| {
+                        ui.label(&message);
+                        if ui.button("OK").clicked() {
+                            keep = false;
+                        }
+                    });
                 });
 
             if keep {
-                self.error = Some(err);
+                self.window_message = Some(message);
             }
         }
     }

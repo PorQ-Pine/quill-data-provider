@@ -291,8 +291,8 @@ pub struct EinkWindowSetting {
     pub settings: DriverMode,
 }
 
-pub fn load_settings(user: String) -> Result<Vec<EinkWindowSetting>, Box<dyn std::error::Error>> {
-    let path = format!("/home/{}/.config/eink_window_settings/config.ron", user);
+// format!("/home/{}/.config/eink_window_settings/config.ron", user)
+pub fn load_window_settings(path: String) -> Result<Vec<EinkWindowSetting>, Box<dyn std::error::Error>> {
     let contents = std::fs::read_to_string(path)?;
     let settings: Vec<EinkWindowSetting> = ron::from_str(&contents)?;
     Ok(settings)

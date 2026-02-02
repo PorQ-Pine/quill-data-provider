@@ -7,7 +7,11 @@ use std::{
 
 use eframe::egui;
 use enum2egui::GuiInspect;
-use quill_data_provider_lib::{EinkWindowSetting, load_settings};
+use quill_data_provider_lib::{EinkWindowSetting, load_window_settings};
+
+use crate::style::style;
+
+mod style;
 
 fn save_settings(settings: &Vec<EinkWindowSetting>) -> Result<(), Box<dyn std::error::Error>> {
     for (i, set) in settings.iter().enumerate() {
@@ -27,6 +31,7 @@ fn save_settings(settings: &Vec<EinkWindowSetting>) -> Result<(), Box<dyn std::e
 fn main() -> eframe::Result {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
     let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default().with_app_id("EinkWindowSettings"),
         ..Default::default()
     };
     let (tx, rx) = mpsc::channel::<Vec<String>>();
@@ -57,9 +62,17 @@ fn main() -> eframe::Result {
 
     let mut settings = Vec::new();
 
-    let home_path = std::env::var("USER").unwrap_or_default();
-    println!("User is: {}", home_path);
-    if let Ok(loaded_settings) = load_settings(home_path) {
+    // So it opens the ones in the repo here. Yes, it does not support arm mac
+    #[cfg(target_arch = "x86_64")]
+    let path = "default/config.ron";
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        let user = std::env::var("USER").unwrap_or_default();
+        let path = format!("/home/{}/.config/eink_window_settings/config.ron", user);
+    }
+
+    println!("Path is: {}", path);
+    if let Ok(loaded_settings) = load_window_settings(path.to_string()) {
         settings = loaded_settings;
     }
 
@@ -67,14 +80,20 @@ fn main() -> eframe::Result {
         settings: settings,
         windows_rx: rx,
         windows: Vec::new(),
-        zoom_factor: 1.0,
+        zoom_factor: 1.2,
         error: None,
     };
 
     eframe::run_native(
         "Eink window settings",
         options,
-        Box::new(|_cc| Ok(Box::new(app))),
+        Box::new(|cc| {
+            cc.egui_ctx.set_zoom_factor(1.2);
+            cc.egui_ctx.set_visuals(egui::Visuals::light());
+            cc.egui_ctx.set_style(style());
+
+            Ok(Box::new(app))
+        }),
     )
 }
 
@@ -88,8 +107,6 @@ struct MyApp {
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        ctx.set_visuals(egui::Visuals::light());
-
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
                 if ui.button("Save").clicked() {
@@ -121,8 +138,8 @@ impl eframe::App for MyApp {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            egui::ScrollArea::vertical()
-                .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
+            egui::ScrollArea::both()
+                // .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
                 .show(ui, |ui| {
                     ui.heading("Eink window settings");
                     ui.label("Values which are global, but will be set for the currently focused window (or defaults if not apply, for the focused window):

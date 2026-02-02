@@ -1,0 +1,40 @@
+[
+    (
+        app_id: "Alacritty",
+        settings: Normal(Y2(Tresholding, DisableFastDrawing)),
+    ),
+    (
+        app_id: "org.freedesktop.Xwayland",
+        settings: Normal(Y1(Tresholding, _12)),
+    ),
+    (
+        app_id: "obsidian",
+        settings: Normal(Y4(FastDrawing((
+            delay: 25,
+        )))),
+    ),
+    (
+        app_id: "org.kde.okular",
+        settings: Normal(Y4(FastDrawing((
+            delay: 25,
+        )))),
+    ),
+    (
+        app_id: "org.gnome.Rhythmbox3",
+        settings: Normal(Y2(Dithering(Bayer), DisableFastDrawing)),
+    ),
+    (
+        app_id: "org.mozilla.firefox",
+        settings: Fast(Bayer),
+    ),
+    (
+        app_id: "org.kde.falkon",
+        settings: Fast(Bayer),
+    ),
+    (
+        app_id: "EinkWindowSettings",
+        settings: Normal(Y2(Tresholding, FastDrawing((
+            delay: 25,
+        )))),
+    ),
+]

@@ -32,7 +32,7 @@ impl SettingsMenuListener {
                                 }
                             }
                             Self::window_manage(!is_visible).await;
-                            sleep(Duration::from_millis(50 * counter)).await;
+                            sleep(Duration::from_millis(200 * counter)).await;
                             new_is_visible = Self::is_visible().await;
                             counter += 1;
                             latest_call = Instant::now();

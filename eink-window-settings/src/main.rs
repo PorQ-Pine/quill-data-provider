@@ -7,25 +7,34 @@ use std::{
 
 use eframe::egui;
 use enum2egui::GuiInspect;
-use quill_data_provider_lib::{
-    EinkWindowSetting, WINDOW_SETTINGS_CONFIG_NAME, WINDOW_SETTINGS_HOME_CONFIG_DIR,
-    load_window_settings,
-};
+use quill_data_provider_lib::{EinkWindowSetting, load_window_settings};
+
+#[cfg(not(target_arch = "x86_64"))]
+use quill_data_provider_lib::{WINDOW_SETTINGS_CONFIG_NAME, WINDOW_SETTINGS_HOME_CONFIG_DIR};
 
 use crate::style::style;
 
 mod style;
 
-fn save_settings(settings: &Vec<EinkWindowSetting>) -> Result<String, Box<dyn std::error::Error>> {
+fn save_settings(
+    settings: &Vec<EinkWindowSetting>,
+    path: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
     for (i, set) in settings.iter().enumerate() {
         if set.app_id.is_empty() {
             return Err(format!("Id at index {} is empty", i).into());
         }
     }
-    let user = std::env::var("USER")?;
-    let dir = format!("/home/{}{}", user, WINDOW_SETTINGS_HOME_CONFIG_DIR);
-    std::fs::create_dir_all(&dir)?;
-    let path = std::path::Path::new(&dir).join(WINDOW_SETTINGS_CONFIG_NAME);
+
+    if let Some(parent) = std::path::Path::new(&path).parent() {
+        match std::fs::create_dir_all(parent) {
+            Ok(_) => {}
+            Err(e) => {
+                return Err(format!("Failed to create directories for {}: {}", path, e).into());
+            }
+        }
+    }
+
     let ron = ron::ser::to_string_pretty(settings, ron::ser::PrettyConfig::default())?;
     std::fs::write(path, ron)?;
     Ok(format!("Succesfully saved settings").into())
@@ -89,6 +98,7 @@ fn main() -> eframe::Result {
         windows: Vec::new(),
         zoom_factor: 1.2,
         window_message: None,
+        save_settings_path: path.to_string(),
     };
 
     eframe::run_native(
@@ -110,6 +120,7 @@ struct MyApp {
     windows: Vec<String>,
     zoom_factor: f32,
     window_message: Option<String>,
+    save_settings_path: String,
 }
 
 impl eframe::App for MyApp {
@@ -117,7 +128,7 @@ impl eframe::App for MyApp {
         egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
                 if ui.button("Save").clicked() {
-                    let status = save_settings(&self.settings);
+                    let status = save_settings(&self.settings, &self.save_settings_path);
                     match status {
                         Ok(x) => self.window_message = Some(x),
                         Err(x) => self.window_message = Some(x.to_string()),

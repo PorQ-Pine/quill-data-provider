@@ -37,10 +37,14 @@
             delay: 25,
         )))),
     ),
-        (
+    (
         app_id: "EinkWindowSettings",
         settings: Normal(Y2(Thresholding, FastDrawing((
             delay: 25,
         )))),
+    ),
+    (
+        app_id: "cosmic-wanderer",
+        settings: Normal(Y2(Thresholding, DisableFastDrawing)),
     ),
 ]

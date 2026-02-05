@@ -45,6 +45,6 @@
     ),
     (
         app_id: "cosmic-wanderer",
-        settings: Normal(Y2(Thresholding, DisableFastDrawing)),
+        settings: Normal(Y4(DisableFastDrawing)),
     ),
 ]

@@ -5,6 +5,7 @@ pub mod dunst;
 pub mod eink;
 pub mod eink_listener;
 // pub mod gamma;
+pub mod gestures;
 pub mod listener;
 pub mod network;
 pub mod player;
@@ -27,6 +28,7 @@ use volume::VolumeListener;
 
 use crate::dunst::DunstListener;
 use crate::eink_listener::EinkListener;
+use crate::gestures::GesturesManager;
 use crate::settingsmenu::SettingsMenuListener;
 use crate::virtualkeyboard::VirtualKeyboardListener;
 
@@ -141,6 +143,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         let mut socket = volume_listener.open_socket().await;
         volume_listener.start(&mut socket).await;
+    });
+
+    let mut gestures_manager = GesturesManager::default();
+    tokio::spawn(async move {
+        gestures_manager.start().await;
     });
 
     tokio::signal::ctrl_c()

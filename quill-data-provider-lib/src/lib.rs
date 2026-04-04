@@ -126,7 +126,7 @@ impl ThresholdLevel {
         */
 
         let level: u8 = self.to_u8();
-
+        debug!("Writing Y1 threshold level: {}", level);
         if let Err(e) = tokio::fs::write(
             "/sys/module/rockchip_ebc_blit_neon/parameters/y4_threshold_y1",
             level.to_string(),

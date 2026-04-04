@@ -142,6 +142,7 @@ impl SocketHandler for BluetoothListener {
         }
         */
         let mut last_bluetooth_line = String::new();
+        let mut last_bluetooth_sended = String::new();
         loop {
             let output = Command::new("rfkill")
                 .output()
@@ -149,11 +150,15 @@ impl SocketHandler for BluetoothListener {
                 .expect("failed to execute rfkill");
             let output_str = String::from_utf8_lossy(&output.stdout);
             if let Some(bt_line) = output_str.lines().find(|l| l.contains("bluetooth")) {
-                if bt_line != last_bluetooth_line {
-                    debug!("Bluetooth changed: {}", bt_line);
-                    self.send_unix(unix, get_bt().await).await;
-
-                    last_bluetooth_line = bt_line.to_string();
+                // If then run every time because we don't know if connected
+                if bt_line != last_bluetooth_line || bt_line.contains("unblocked unblocked") {
+                    let bluetooth_sended = get_bt().await;
+                    if bluetooth_sended != last_bluetooth_sended {
+                        last_bluetooth_sended = bluetooth_sended;
+                        last_bluetooth_line = bt_line.to_string();
+                        debug!("Bluetooth changed: {}", bt_line);
+                        self.send_unix(unix, last_bluetooth_sended.clone()).await;
+                    }
                 }
             }
             sleep(Duration::from_secs(1)).await;
